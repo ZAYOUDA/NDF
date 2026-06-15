@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notes de Frais</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f4f4; color: #0a0a0a; min-height: 100vh; font-size: 13px; }
+
+  /* ── Header ── */
+  .header {
+    background: #ffffff;
+    border-bottom: 0.5px solid #e4e4e4;
+    padding: 0 28px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-logo { font-size: 14px; font-weight: 500; color: #0a0a0a; letter-spacing: -.2px; }
+  .header-sep { width: 0.5px; height: 18px; background: #e0e0e0; }
+  .header-sub { font-size: 11px; color: #999; }
+  .header-right { display: flex; gap: 8px; }
+  .btn-ghost {
+    background: #f4f4f4;
+    border: 0.5px solid #e0e0e0;
+    color: #333;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background .15s, border-color .15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-ghost:hover { background: #ececec; border-color: #d0d0d0; }
+  .btn-primary {
+    background: #0a0a0a;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s;
+  }
+  .btn-primary:hover { background: #222; }
+
+  /* ── Layout ── */
+  .page { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px; }
+  .stat {
+    background: #f8f8f8;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .stat .lbl { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .6px; }
+  .stat .val { font-size: 18px; font-weight: 500; color: #0a0a0a; margin-top: 4px; line-height: 1; }
+
+  /* ── Toolbar ── */
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .toolbar-title { font-size: 12px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: .6px; }
+
+  /* ── Table ── */
+  .table-wrap { background: #fff; border: 0.5px solid #e4e4e4; border-radius: 8px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1100px; }
+  thead tr { background: #f4f4f4; border-top: 0.5px solid #e4e4e4; border-bottom: 0.5px solid #e4e4e4; }
+  thead th {
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 500;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+  }
+  thead th.r { text-align: right; }
+  tbody tr { border-bottom: 0.5px solid #f0f0f0; transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #fafafa; }
+  tbody td { padding: 10px 14px; color: #333; vertical-align: middle; }
+  tbody td.r { text-align: right; font-variant-numeric: tabular-nums; color: #0a0a0a; }
+  tbody td.muted { color: #aaa; }
+  .id-cell { font-size: 11px; color: #999; font-variant-numeric: tabular-nums; }
+  .label-cell { color: #0a0a0a; }
+  .label-cell .client { font-size: 11px; color: #888; margin-top: 1px; }
+  .amount { font-weight: 500; }
+  .tva-val { color: #555; }
+  .tva-empty { color: #ccc; }
+  .thumb-list { display: flex; gap: 4px; flex-wrap: wrap; }
+  .thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 0.5px solid #e4e4e4; cursor: pointer; transition: opacity .15s; }
+  .thumb:hover { opacity: .7; }
+  .actions { display: flex; gap: 4px; }
+  .btn-row {
+    background: none;
+    border: 0.5px solid #e4e4e4;
+    border-radius: 5px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #666;
+    font-family: inherit;
+    transition: all .12s;
+  }
+  .btn-row:hover { background: #f4f4f4; border-color: #d0d0d0; color: #0a0a0a; }
+  .btn-row.del:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+  .empty { text-align: center; padding: 52px; color: #bbb; }
+  .empty .ico { font-size: 28px; margin-bottom: 10px; }
+  .empty p { font-size: 13px; }
+
+  /* ── Modal overlay ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 100;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px;
+    overflow-y: auto;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border: 0.5px solid #e4e4e4;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,.12);
+  }
+  .modal-head {
+    padding: 16px 20px;
+    border-bottom: 0.5px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-head h2 { font-size: 14px; font-weight: 500; color: #0a0a0a; }
+  .btn-close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; line-height: 1; padding: 0 2px; }
+  .btn-close:hover { color: #333; }
+
+  /* ── Form ── */
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .form-section { display: flex; flex-direction: column; gap: 10px; }
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    padding-bottom: 8px;
+    border-bottom: 0.5px solid #f0f0f0;
+  }
+  .form-row { display: grid; gap: 10px; }
+  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-field label { font-size: 11px; color: #666; }
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    border: 0.5px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 11px;
+    font-size: 12px;
+    color: #0a0a0a;
+    font-family: inherit;
+    background: #fff;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .form-field input:focus,
+  .form-field select:focus,
+  .form-field textarea:focus { border-color: #aaa; }
+  .form-field input::placeholder,
+  .form-field textarea::placeholder { color: #ccc; }
+  .form-field textarea { resize: vertical; min-height: 56px; }
+
+  /* ── VAT lines ── */
+  .vat-lines { display: flex; flex-direction: column; gap: 6px; }
+  .vat-line {
+    display: grid;
+    grid-template-columns: 130px 1fr 130px 28px;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    background: #f8f8f8;
+    border: 0.5px solid #ebebeb;
+    border-radius: 6px;
+  }
+  .vat-line select,
+  .vat-line input {
+    border: 0.5px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    background: #fff;
+    outline: none;
+    color: #0a0a0a;
+  }
+  .vat-line select:focus,
+  .vat-line input:focus { border-color: #aaa; }
+  .vat-computed { text-align: right; }
+  .vat-computed span { display: block; font-size: 11px; color: #888; line-height: 1.5; }
+  .vat-computed span.strong { color: #0a0a0a; font-weight: 500; }
+  .btn-rm-vat {
+    background: none;
+    border: 0.5px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    color: #bbb;
+    font-size: 13px;
+    line-height: 1;
+    transition: all .12s;
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+  }
+  .btn-rm-vat:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+  .btn-add-vat {
+    background: none;
+    border: 0.5px dashed #d0d0d0;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    color: #888;
+    font-size: 12px;
+    font-family: inherit;
+    width: 100%;
+    text-align: center;
+    transition: all .15s;
+    margin-top: 2px;
+  }
+  .btn-add-vat:hover { border-color: #aaa; color: #333; background: #fafafa; }
+
+  /* ── Upload ── */
+  .upload-zone {
+    border: 0.5px dashed #d0d0d0;
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: all .15s;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: #888; background: #fafafa; }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-zone p { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .upload-zone strong { color: #555; }
+  .btn-cam {
+    background: none;
+    border: 0.5px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    color: #888;
+    font-size: 12px;
+    font-family: inherit;
+    width: 100%;
+    text-align: center;
+    transition: all .15s;
+    margin-top: 6px;
+  }
+  .btn-cam:hover { border-color: #aaa; color: #333; background: #fafafa; }
+  #camBox { display: none; margin-top: 10px; text-align: center; }
+  #camBox video { width: 100%; border-radius: 6px; max-height: 200px; object-fit: cover; border: 0.5px solid #e4e4e4; }
+  .btn-snap { margin-top: 8px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 12px; font-family: inherit; }
+  #canvas { display: none; }
+  .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; margin-top: 10px; }
+  .prev-item { position: relative; }
+  .prev-item img { width: 100%; height: 72px; object-fit: cover; border-radius: 5px; border: 0.5px solid #e4e4e4; cursor: pointer; }
+  .prev-item .rm {
+    position: absolute; top: -5px; right: -5px;
+    background: #0a0a0a; color: #fff;
+    border: none; border-radius: 50%;
+    width: 18px; height: 18px; font-size: 10px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Modal footer ── */
+  .modal-foot {
+    padding: 14px 20px;
+    border-top: 0.5px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-cancel { background: none; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 12px; font-family: inherit; color: #666; transition: all .12s; }
+  .btn-cancel:hover { background: #f4f4f4; }
+  .btn-save { background: #0a0a0a; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 12px; font-family: inherit; transition: background .15s; }
+  .btn-save:hover { background: #222; }
+  .btn-save:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Lightbox ── */
+  .lbx { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 200; align-items: center; justify-content: center; }
+  .lbx.open { display: flex; }
+  .lbx img { max-width: 90vw; max-height: 90vh; border-radius: 6px; object-fit: contain; }
+  .lbx .cls { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 24px; cursor: pointer; background: none; border: none; opacity: .7; }
+  .lbx .cls:hover { opacity: 1; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 20px; right: 20px; background: #0a0a0a; color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 12px; z-index: 300; transform: translateY(60px); transition: transform .25s; pointer-events: none; }
+  .toast.show { transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <span class="header-logo">Notes de Frais</span>
+    <div class="header-sep"></div>
+    <span class="header-sub">Suivi des dépenses professionnelles</span>
+  </div>
+  <div class="header-right">
+    <a href="/api/export/excel" class="btn-ghost">↓ Excel</a>
+    <a href="/api/export/pdf"   class="btn-ghost">↓ PDF Factures</a>
+    <button class="btn-primary" onclick="openModal()">+ Nouvelle NDF</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="lbl">NDF</div><div class="val" id="sCount">0</div></div>
+    <div class="stat"><div class="lbl">Transport</div><div class="val" id="sTransport">—</div></div>
+    <div class="stat"><div class="lbl">Repas</div><div class="val" id="sRepas">—</div></div>
+    <div class="stat"><div class="lbl">Total TTC</div><div class="val" id="sTTC">—</div></div>
+    <div class="stat"><div class="lbl">Total HT</div><div class="val" id="sHT">—</div></div>
+    <div class="stat"><div class="lbl">TVA 10%</div><div class="val" id="sTva10">—</div></div>
+    <div class="stat"><div class="lbl">TVA 20%</div><div class="val" id="sTva20">—</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-title">Liste des NDF</span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Description / Client / Projet</th>
+          <th class="r">Transport (TTC)</th>
+          <th class="r">Repas (TTC)</th>
+          <th>Commentaire</th>
+          <th class="r">Total TTC</th>
+          <th class="r">Total HT</th>
+          <th class="r">TVA 10%</th>
+          <th class="r">TVA 20%</th>
+          <th class="r">TVA 2,6%</th>
+          <th class="r">TVA 5,5%</th>
+          <th>Photos</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="13"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Nouvelle Note de Frais</h2>
+      <button class="btn-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+
+      <!-- Identification -->
+      <div class="form-section">
+        <div class="section-label">Identification</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Description</label>
+            <input type="text" id="fDesc" placeholder="Libellé de la dépense">
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-field">
+            <label>Client</label>
+            <input type="text" id="fClient" placeholder="Nom du client">
+          </div>
+          <div class="form-field">
+            <label>Projet</label>
+            <input type="text" id="fProjet" placeholder="Nom du projet">
+          </div>
+        </div>
+      </div>
+
+      <!-- Montants -->
+      <div class="form-section">
+        <div class="section-label">Montants par catégorie (TTC)</div>
+        <div class="form-row cols-2">
+          <div class="form-field">
+            <label>Transport (€ TTC)</label>
+            <input type="number" id="fTransport" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="form-field">
+            <label>Repas (€ TTC)</label>
+            <input type="number" id="fRepas" step="0.01" min="0" placeholder="0,00">
+          </div>
+        </div>
+      </div>
+
+      <!-- TVA -->
+      <div class="form-section">
+        <div class="section-label">Ventilation TVA</div>
+        <div class="vat-lines" id="vatLines"></div>
+        <button class="btn-add-vat" onclick="addVatLine()">+ Ajouter une ligne TVA</button>
+      </div>
+
+      <!-- Commentaire -->
+      <div class="form-section">
+        <div class="section-label">Commentaire</div>
+        <div class="form-row">
+          <div class="form-field">
+            <textarea id="fComment" placeholder="Remarques, précisions..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Justificatifs -->
+      <div class="form-section">
+        <div class="section-label">Justificatifs</div>
+        <div class="upload-zone" id="dropZone" ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
+          <input type="file" id="fileInput" accept="image/*" multiple onchange="onFileSelect(event)">
+          <p><strong>Cliquez</strong> ou glissez vos images ici</p>
+          <p>JPG, PNG, WEBP — max 20 Mo</p>
+        </div>
+        <button type="button" class="btn-cam" onclick="toggleCam()">📷 Prendre une photo</button>
+        <div id="camBox">
+          <video id="video" autoplay playsinline></video>
+          <canvas id="canvas"></canvas>
+          <br>
+          <button type="button" class="btn-snap" onclick="snapPhoto()">Capturer</button>
+          <button type="button" class="btn-cancel" style="margin-left:8px;background:none;border:0.5px solid #e0e0e0;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:12px;font-family:inherit;" onclick="stopCam()">Annuler</button>
+        </div>
+        <div class="preview-grid" id="previewGrid"></div>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" id="btnSave" onclick="saveExpense()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lbx" id="lbx" onclick="closeLbx()">
+  <button class="cls" onclick="closeLbx()">×</button>
+  <img id="lbxImg" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const VAT_RATES = [2.6, 5.5, 10, 20];
+let expenses = [];
+let newFiles = [];
+let removedImages = [];
+let camStream = null;
+
+async function load() {
+  expenses = await fetch('/api/expenses').then(r => r.json());
+  renderStats();
+  renderTable();
+}
+
+function money(n) {
+  if (!n) return '—';
+  return (n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Stats ──
+function renderStats() {
+  const e = expenses;
+  const sum = k => e.reduce((s,x) => s + (x[k]||0), 0);
+  document.getElementById('sCount').textContent      = e.length || '—';
+  document.getElementById('sTransport').textContent  = money(sum('transport'));
+  document.getElementById('sRepas').textContent      = money(sum('repas'));
+  document.getElementById('sTTC').textContent        = money(sum('totalTTC'));
+  document.getElementById('sHT').textContent         = money(sum('totalHT'));
+  document.getElementById('sTva10').textContent      = money(sum('tva_10'));
+  document.getElementById('sTva20').textContent      = money(sum('tva_20'));
+}
+
+// ── Table ──
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  if (!expenses.length) {
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = expenses.map(e => {
+    const descLine = esc(e.description || '');
+    const subLine  = [e.client, e.projet].filter(Boolean).map(esc).join(' · ');
+    const tva10 = e.tva_10  || 0;
+    const tva20 = e.tva_20  || 0;
+    const tva26 = e.tva_2_6 || 0;
+    const tva55 = e.tva_5_5 || 0;
+    return `<tr>
+      <td class="id-cell">${e.id}</td>
+      <td class="label-cell">
+        ${descLine ? `<div>${descLine}</div>` : ''}
+        ${subLine  ? `<div class="client">${subLine}</div>` : (!descLine ? '<span style="color:#ccc">—</span>' : '')}
+      </td>
+      <td class="r amount">${e.transport ? money(e.transport) : '<span class="tva-empty">—</span>'}</td>
+      <td class="r amount">${e.repas     ? money(e.repas)     : '<span class="tva-empty">—</span>'}</td>
+      <td class="muted" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.commentaire)||'—'}</td>
+      <td class="r amount">${money(e.totalTTC)}</td>
+      <td class="r" style="color:#666">${money(e.totalHT)}</td>
+      <td class="r ${tva10?'tva-val':'tva-empty'}">${tva10 ? money(tva10) : '—'}</td>
+      <td class="r ${tva20?'tva-val':'tva-empty'}">${tva20 ? money(tva20) : '—'}</td>
+      <td class="r ${tva26?'tva-val':'tva-empty'}">${tva26 ? money(tva26) : '—'}</td>
+      <td class="r ${tva55?'tva-val':'tva-empty'}">${tva55 ? money(tva55) : '—'}</td>
+      <td>
+        <div class="thumb-list">
+          ${e.images.map(img=>`<img class="thumb" src="/uploads/${img}" onclick="openLbx('/uploads/${img}')">`).join('')}
+          ${!e.images.length ? '<span class="tva-empty">—</span>' : ''}
+        </div>
+      </td>
+      <td>
+        <div class="actions">
+          <button class="btn-row" onclick="editExp(${e.id})">Modifier</button>
+          <button class="btn-row del" onclick="delExp(${e.id})">Supprimer</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Modal ──
+function openModal(exp = null) {
+  newFiles = []; removedImages = [];
+  document.getElementById('previewGrid').innerHTML = '';
+  document.getElementById('vatLines').innerHTML = '';
+  document.getElementById('editId').value = '';
+  document.getElementById('modalTitle').textContent = 'Nouvelle Note de Frais';
+  document.getElementById('fDesc').value      = '';
+  document.getElementById('fClient').value    = '';
+  document.getElementById('fProjet').value    = '';
+  document.getElementById('fTransport').value = '';
+  document.getElementById('fRepas').value     = '';
+  document.getElementById('fComment').value   = '';
+  stopCam();
+
+  if (exp) {
+    document.getElementById('modalTitle').textContent = `Modifier NDF #${exp.id}`;
+    document.getElementById('editId').value    = exp.id;
+    document.getElementById('fDesc').value     = exp.description;
+    document.getElementById('fClient').value   = exp.client;
+    document.getElementById('fProjet').value   = exp.projet;
+    document.getElementById('fTransport').value = exp.transport || '';
+    document.getElementById('fRepas').value     = exp.repas || '';
+    document.getElementById('fComment').value   = exp.commentaire;
+    (exp.vatLines || []).forEach(l => addVatLine(l.rate, l.ttc));
+    exp.images.forEach(img => addPreview(`/uploads/${img}`, img, true));
+  }
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal() { stopCam(); document.getElementById('overlay').classList.remove('open'); }
+function closeOverlay(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+function editExp(id) { openModal(expenses.find(e => e.id === id)); }
+
+async function delExp(id) {
+  if (!confirm('Supprimer cette NDF ?')) return;
+  await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
+  toast('NDF supprimée');
+  load();
+}
+
+async function saveExpense() {
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+
+  const vatLines = [];
+  document.querySelectorAll('.vat-line').forEach(row => {
+    const rate = parseFloat(row.querySelector('.vat-rate').value);
+    const ttc  = parseFloat(row.querySelector('.vat-ttc').value) || 0;
+    if (ttc > 0) vatLines.push({ rate, ttc });
+  });
+
+  const id = document.getElementById('editId').value;
+  const fd = new FormData();
+  fd.append('description', document.getElementById('fDesc').value);
+  fd.append('client',      document.getElementById('fClient').value);
+  fd.append('projet',      document.getElementById('fProjet').value);
+  fd.append('transport',   document.getElementById('fTransport').value || '0');
+  fd.append('repas',       document.getElementById('fRepas').value || '0');
+  fd.append('commentaire', document.getElementById('fComment').value);
+  fd.append('vatLines',    JSON.stringify(vatLines));
+  newFiles.forEach(f => fd.append('images', f));
+
+  if (id) {
+    fd.append('removeImages', JSON.stringify(removedImages));
+    await fetch(`/api/expenses/${id}`, { method: 'PUT', body: fd });
+    toast('NDF mise à jour');
+  } else {
+    await fetch('/api/expenses', { method: 'POST', body: fd });
+    toast('NDF ajoutée');
+  }
+
+  btn.disabled = false; btn.textContent = 'Enregistrer';
+  closeModal(); load();
+}
+
+// ── VAT ──
+function addVatLine(rate = 20, ttc = '') {
+  const c = document.getElementById('vatLines');
+  const d = document.createElement('div');
+  d.className = 'vat-line';
+  d.innerHTML = `
+    <select class="vat-rate" onchange="recompute(this)">
+      ${VAT_RATES.map(r=>`<option value="${r}"${r==rate?' selected':''}>${r}%</option>`).join('')}
+    </select>
+    <div class="form-field" style="gap:3px">
+      <label style="font-size:10px;color:#aaa">Montant TTC (€)</label>
+      <input type="number" class="vat-ttc" step="0.01" min="0" placeholder="0,00" value="${ttc}" oninput="recompute(this)">
+    </div>
+    <div class="vat-computed">
+      <span class="vc-ht">HT —</span>
+      <span class="vc-tva">TVA —</span>
+    </div>
+    <button class="btn-rm-vat" onclick="this.parentElement.remove()" title="Supprimer">×</button>
+  `;
+  c.appendChild(d);
+  recompute(d.querySelector('.vat-ttc'));
+}
+
+function recompute(el) {
+  const row  = el.closest('.vat-line');
+  const rate = parseFloat(row.querySelector('.vat-rate').value) || 0;
+  const ttc  = parseFloat(row.querySelector('.vat-ttc').value)  || 0;
+  const ht   = ttc / (1 + rate / 100);
+  const tva  = ttc - ht;
+  const comp = row.querySelector('.vat-computed');
+  if (ttc) {
+    comp.querySelector('.vc-ht').textContent  = `HT ${ht.toFixed(2)} €`;
+    comp.querySelector('.vc-tva').textContent = `TVA ${tva.toFixed(2)} €`;
+    comp.querySelector('.vc-ht').className  = 'vc-ht strong';
+    comp.querySelector('.vc-tva').className = 'vc-tva';
+  } else {
+    comp.querySelector('.vc-ht').textContent  = 'HT —';
+    comp.querySelector('.vc-tva').textContent = 'TVA —';
+    comp.querySelector('.vc-ht').className  = 'vc-ht';
+    comp.querySelector('.vc-tva').className = 'vc-tva';
+  }
+}
+
+// ── Files ──
+function onFileSelect(e) { Array.from(e.target.files).forEach(addFile); e.target.value=''; }
+function onDragOver(e)   { e.preventDefault(); document.getElementById('dropZone').classList.add('drag'); }
+function onDragLeave()   { document.getElementById('dropZone').classList.remove('drag'); }
+function onDrop(e)       { e.preventDefault(); onDragLeave(); Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')).forEach(addFile); }
+
+function addFile(file) {
+  newFiles.push(file);
+  addPreview(URL.createObjectURL(file), file.name, false);
+}
+function addPreview(src, name, isExisting) {
+  const g = document.getElementById('previewGrid');
+  const d = document.createElement('div');
+  d.className = 'prev-item'; d.dataset.name = name; d.dataset.ex = isExisting ? '1' : '0';
+  d.innerHTML = `<img src="${src}" onclick="openLbx('${src}')"><button class="rm" onclick="rmPreview(this)">×</button>`;
+  g.appendChild(d);
+}
+function rmPreview(btn) {
+  const item = btn.parentElement;
+  if (item.dataset.ex === '1') removedImages.push(item.dataset.name);
+  else newFiles = newFiles.filter(f => f.name !== item.dataset.name);
+  item.remove();
+}
+
+// ── Camera ──
+async function toggleCam() {
+  document.getElementById('camBox').style.display === 'block' ? stopCam() : startCam();
+}
+async function startCam() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    document.getElementById('video').srcObject = camStream;
+    document.getElementById('camBox').style.display = 'block';
+  } catch(e) { alert('Caméra inaccessible : ' + e.message); }
+}
+function stopCam() {
+  if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  document.getElementById('camBox').style.display = 'none';
+}
+function snapPhoto() {
+  const v=document.getElementById('video'), c=document.getElementById('canvas');
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  c.toBlob(blob=>{
+    addFile(new File([blob],`photo_${Date.now()}.jpg`,{type:'image/jpeg'}));
+    stopCam(); toast('Photo capturée');
+  },'image/jpeg',.92);
+}
+
+// ── Lightbox ──
+function openLbx(src) { document.getElementById('lbxImg').src=src; document.getElementById('lbx').classList.add('open'); }
+function closeLbx()   { document.getElementById('lbx').classList.remove('open'); }
+
+// ── Toast ──
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+load();
+</script>
+</body>
+</html>
