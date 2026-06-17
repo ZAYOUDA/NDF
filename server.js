@@ -357,3 +357,5 @@ app.get('/api/export/pdf', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`NDF App : http://localhost:${PORT}`));
+
+module.exports = app;
