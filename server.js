@@ -4,7 +4,6 @@ const multer  = require('multer');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { createClient } = require('@supabase/supabase-js');
-const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const https = require('https');
 
@@ -52,7 +51,7 @@ async function uploadImages(files) {
   const urls = [];
   for (const file of files) {
     const ext      = path.extname(file.originalname) || '.jpg';
-    const filename = `${uuidv4()}${ext}`;
+    const filename = `${crypto.randomUUID()}${ext}`;
     const { error } = await supabase.storage
       .from(BUCKET)
       .upload(filename, file.buffer, { contentType: file.mimetype, upsert: false });
