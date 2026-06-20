@@ -31,19 +31,22 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Helpers ──────────────────────────────────────────────
-function computeTotals(vatLines) {
+function computeTotals(vatLines, transport, repas) {
   const r = { tva_2_6: 0, tva_5_5: 0, tva_10: 0, tva_20: 0, total_ht: 0, total_ttc: 0 };
+  // total_ttc = montant saisi par l'utilisateur (pas la somme des lignes TVA)
+  r.total_ttc = (parseFloat(transport) || 0) + (parseFloat(repas) || 0);
   (vatLines || []).forEach(line => {
     const ttc  = parseFloat(line.ttc)  || 0;
     const rate = parseFloat(line.rate) || 0;
     const ht   = ttc / (1 + rate / 100);
-    r.total_ttc += ttc;
     r.total_ht  += ht;
     if (rate === 2.6)  r.tva_2_6 += ttc - ht;
     if (rate === 5.5)  r.tva_5_5 += ttc - ht;
     if (rate === 10)   r.tva_10  += ttc - ht;
     if (rate === 20)   r.tva_20  += ttc - ht;
   });
+  // si pas de lignes TVA, HT = TTC (pas de TVA)
+  if (!vatLines || !vatLines.length) r.total_ht = r.total_ttc;
   return r;
 }
 
@@ -104,7 +107,7 @@ app.get('/api/expenses', async (req, res) => {
 app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
   const { description, client, projet, mois, categorie, transport, repas, commentaire, vatLines } = req.body;
   const parsedVat = JSON.parse(vatLines || '[]');
-  const totals    = computeTotals(parsedVat);
+  const totals    = computeTotals(parsedVat, transport, repas);
   const images    = await uploadImages(req.files || []);
 
   const { data, error } = await supabase.from('expenses').insert([{
@@ -135,6 +138,7 @@ app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
   const id = parseInt(req.params.id);
   const { description, client, projet, mois, categorie, transport, repas, commentaire, vatLines, removeImages } = req.body;
 
+
   const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
   if (!existing) return res.status(404).json({ error: 'Non trouvé' });
 
@@ -146,7 +150,7 @@ app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
   const images     = [...keptImages, ...newImages];
 
   const parsedVat = JSON.parse(vatLines || '[]');
-  const totals    = computeTotals(parsedVat);
+  const totals    = computeTotals(parsedVat, transport, repas);
 
   const { data, error } = await supabase.from('expenses').update({
     description:  description  || '',
