@@ -255,7 +255,7 @@
           <th>ID</th>
           <th>Description / Client / Projet</th>
           <th>Catégorie</th>
-          <th>Mois</th>
+          <th>Date</th>
           <th class="r">Montant (TTC)</th>
           <th>Commentaire</th>
           <th class="r">Total TTC</th>
@@ -295,8 +295,8 @@
         </div>
         <div class="row2">
           <div class="f">
-            <label>Mois</label>
-            <input type="month" id="fMois">
+            <label>Date</label>
+            <input type="date" id="fMois">
           </div>
           <div class="f">
             <label>Catégorie</label>
@@ -419,7 +419,15 @@ let camStream     = null;
 
 function currentMonthDefault() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function dateToMois(date) { return date ? date.slice(0, 7) : ''; }
+
+function formatDate(date) {
+  if (!date) return '—';
+  const [y, m, d] = date.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 // ── Helpers ──────────────────────────────────────────────
@@ -458,7 +466,7 @@ async function load() {
 }
 
 function renderMonthBar() {
-  const months = [...new Set(expenses.map(e => e.mois).filter(Boolean))].sort().reverse();
+  const months = [...new Set(expenses.map(e => dateToMois(e.mois)).filter(Boolean))].sort().reverse();
   const bar = document.getElementById('monthBar');
   if (!months.length) { bar.innerHTML = ''; return; }
   bar.innerHTML = `
@@ -486,7 +494,7 @@ function setMois(m) {
 }
 
 function renderStats() {
-  const src = currentMois ? expenses.filter(e => e.mois === currentMois) : expenses;
+  const src = currentMois ? expenses.filter(e => dateToMois(e.mois) === currentMois) : expenses;
   const sum = k => src.reduce((s,x) => s+(x[k]||0), 0);
   document.getElementById('sCount').textContent     = src.length || '—';
   document.getElementById('sTransport').textContent = money(sum('transport'));
@@ -503,7 +511,7 @@ function renderTable() {
     tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>`;
     return;
   }
-  const filtered = currentMois ? expenses.filter(e => e.mois === currentMois) : expenses;
+  const filtered = currentMois ? expenses.filter(e => dateToMois(e.mois) === currentMois) : expenses;
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><div class="ico">📂</div><p>Aucune NDF${currentMois ? ' pour ce mois' : ''}</p></div></td></tr>`;
     return;
@@ -523,7 +531,7 @@ function renderTable() {
         ${sub   ? `<div class="sub">${sub}</div>` : (!label ? '<span style="color:#ccc">—</span>' : '')}
       </td>
       <td><span style="font-size:11px;color:#666">${esc(e.categorie||'')}</span></td>
-      <td><span style="font-size:11px;color:#888;font-variant-numeric:tabular-nums">${esc(e.mois||'—')}</span></td>
+      <td><span style="font-size:11px;color:#888;font-variant-numeric:tabular-nums">${formatDate(e.mois)}</span></td>
       <td class="r amount">${montant ? money(montant) : '<span class="tva-empty">—</span>'}</td>
       <td style="color:#aaa;font-size:11px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.commentaire)||'—'}</td>
       <td class="r amount">${money(e.totalTTC)}</td>
@@ -756,10 +764,10 @@ function openExport(type) {
   exportType = type;
   document.getElementById('exportTitle').textContent = type === 'excel' ? 'Exporter Excel' : 'Exporter PDF Factures';
 
-  // Construire la liste des mois disponibles
-  const months = [...new Set(expenses.map(e => e.mois).filter(Boolean))].sort().reverse();
+  // Construire la liste des mois disponibles (groupés par YYYY-MM)
+  const months = [...new Set(expenses.map(e => dateToMois(e.mois)).filter(Boolean))].sort().reverse();
   const counts = {};
-  expenses.forEach(e => { if (e.mois) counts[e.mois] = (counts[e.mois]||0)+1; });
+  expenses.forEach(e => { const m = dateToMois(e.mois); if (m) counts[m] = (counts[m]||0)+1; });
 
   const list = document.getElementById('exportMonthList');
   if (!months.length) {
