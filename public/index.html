@@ -272,7 +272,7 @@
         </div>
         <div class="f">
           <label>Catégorie</label>
-          <select id="fCategorie">
+          <select id="fCategorie" onchange="onCategoryChange()">
             <option value="">— Sélectionner —</option>
             <option value="Transport">Transport</option>
             <option value="Repas">Repas</option>
@@ -286,19 +286,17 @@
         </div>
       </div>
 
-      <!-- Montants -->
+      <!-- Montant -->
       <div class="form-section">
-        <div class="sec-label">Montants (TTC)</div>
-        <div class="row2">
-          <div class="f">
-            <label>Transport (€ TTC)</label>
-            <input type="number" id="fTransport" step="0.01" min="0" placeholder="0,00" oninput="onAmountChange()">
-          </div>
-          <div class="f">
-            <label>Repas (€ TTC)</label>
-            <input type="number" id="fRepas" step="0.01" min="0" placeholder="0,00" oninput="onAmountChange()">
-          </div>
+        <div class="sec-label">Montant (TTC)</div>
+        <div class="f" id="montantField" style="display:none">
+          <label id="montantLabel">Montant (€ TTC)</label>
+          <input type="number" id="fMontant" step="0.01" min="0" placeholder="0,00" oninput="onAmountChange()">
         </div>
+        <p id="montantHint" style="font-size:11px;color:#aaa">Sélectionnez d'abord une catégorie</p>
+        <!-- champs cachés pour compatibilité backend -->
+        <input type="hidden" id="fTransport" value="0">
+        <input type="hidden" id="fRepas" value="0">
       </div>
 
       <!-- TVA -->
@@ -379,8 +377,24 @@ function money(n) {
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function totalTTC() {
-  return (parseFloat(document.getElementById('fTransport').value)||0)
-       + (parseFloat(document.getElementById('fRepas').value)||0);
+  return parseFloat(document.getElementById('fMontant').value) || 0;
+}
+
+function onCategoryChange() {
+  const cat = document.getElementById('fCategorie').value;
+  const field = document.getElementById('montantField');
+  const hint  = document.getElementById('montantHint');
+  const label = document.getElementById('montantLabel');
+  if (cat) {
+    field.style.display = '';
+    hint.style.display  = 'none';
+    label.textContent   = cat + ' (€ TTC)';
+  } else {
+    field.style.display = 'none';
+    hint.style.display  = '';
+    document.getElementById('fMontant').value = '';
+  }
+  onAmountChange();
 }
 
 // ── Load ─────────────────────────────────────────────────
@@ -454,9 +468,12 @@ function openModal(exp = null) {
   document.getElementById('editId').value          = '';
   document.getElementById('modalTitle').textContent = 'Nouvelle Note de Frais';
   ['fDesc','fClient','fProjet','fComment'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fTransport').value = '';
-  document.getElementById('fRepas').value     = '';
+  document.getElementById('fTransport').value = '0';
+  document.getElementById('fRepas').value     = '0';
+  document.getElementById('fMontant').value   = '';
   document.getElementById('fCategorie').value = '';
+  document.getElementById('montantField').style.display = 'none';
+  document.getElementById('montantHint').style.display  = '';
   stopCam();
 
   if (exp) {
@@ -465,9 +482,16 @@ function openModal(exp = null) {
     document.getElementById('fDesc').value       = exp.description;
     document.getElementById('fClient').value     = exp.client;
     document.getElementById('fProjet').value     = exp.projet;
-    document.getElementById('fCategorie').value  = exp.categorie || '';
-    document.getElementById('fTransport').value  = exp.transport || '';
-    document.getElementById('fRepas').value      = exp.repas || '';
+    document.getElementById('fCategorie').value = exp.categorie || '';
+    const savedAmt = exp.transport || exp.repas || 0;
+    document.getElementById('fMontant').value   = savedAmt || '';
+    document.getElementById('fTransport').value = exp.transport || '0';
+    document.getElementById('fRepas').value     = exp.repas || '0';
+    if (exp.categorie) {
+      document.getElementById('montantField').style.display = '';
+      document.getElementById('montantHint').style.display  = 'none';
+      document.getElementById('montantLabel').textContent   = exp.categorie + ' (€ TTC)';
+    }
     document.getElementById('fComment').value    = exp.commentaire;
     (exp.vatLines||[]).forEach(l => addVatLine(l.rate, l.ttc, true));
     (exp.images||[]).forEach(url => addPreview(url, url, true));
@@ -502,8 +526,10 @@ async function saveExpense() {
   fd.append('client',      document.getElementById('fClient').value);
   fd.append('projet',      document.getElementById('fProjet').value);
   fd.append('categorie',   document.getElementById('fCategorie').value);
-  fd.append('transport',   document.getElementById('fTransport').value || '0');
-  fd.append('repas',       document.getElementById('fRepas').value || '0');
+  const cat   = document.getElementById('fCategorie').value;
+  const mont  = document.getElementById('fMontant').value || '0';
+  fd.append('transport', cat === 'Transport' || cat === 'Carburant' ? mont : '0');
+  fd.append('repas',     cat === 'Repas'     ? mont : '0');
   fd.append('commentaire', document.getElementById('fComment').value);
   fd.append('vatLines',    JSON.stringify(vatLines));
   newFiles.forEach(f => fd.append('images', f));

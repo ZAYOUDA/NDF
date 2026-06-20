@@ -330,12 +330,14 @@ app.get('/api/export/pdf', async (req, res) => {
   for (const e of expenses) {
     if (!e.images.length) continue;
     doc.addPage();
-    doc.rect(0,0,W,75).fill('#1a1a18');
+    doc.rect(0,0,W,80).fill('#1a1a18');
+    doc.fillColor('#aaa').fontSize(9).font('Helvetica').text(`NDF #${e.id}`, 40, 12, {width:W-80});
     doc.fillColor('white').fontSize(13).font('Helvetica-Bold');
     const label = [e.description, e.client, e.projet].filter(Boolean).join(' — ') || `NDF #${e.id}`;
-    doc.text(label, 40, 12, {width:W-80});
+    doc.text(label, 40, 26, {width:W-80});
     doc.fontSize(9).font('Helvetica');
-    doc.text(`TTC: ${e.totalTTC.toFixed(2)} €  |  HT: ${e.totalHT.toFixed(2)} €  |  Transport: ${e.transport.toFixed(2)} €  |  Repas: ${e.repas.toFixed(2)} €`, 40, 36, {width:W-80});
+    const catLabel = e.categorie ? `${e.categorie}: ${(e.transport||e.repas||0).toFixed(2)} €` : `Transport: ${e.transport.toFixed(2)} €  |  Repas: ${e.repas.toFixed(2)} €`;
+    doc.text(`${catLabel}  |  TTC: ${e.totalTTC.toFixed(2)} €  |  HT: ${e.totalHT.toFixed(2)} €`, 40, 48, {width:W-80});
     const parts=[];
     if(e.tva_2_6) parts.push(`TVA 2,6%: ${e.tva_2_6.toFixed(2)} €`);
     if(e.tva_5_5) parts.push(`TVA 5,5%: ${e.tva_5_5.toFixed(2)} €`);
@@ -343,7 +345,7 @@ app.get('/api/export/pdf', async (req, res) => {
     if(e.tva_20)  parts.push(`TVA 20%: ${e.tva_20.toFixed(2)} €`);
     doc.text(parts.join('  |  '), 40, 53, {width:W-80});
 
-    let imgY=90;
+    let imgY=95;
     const maxH = (doc.page.height-imgY-40) / Math.min(e.images.length,2);
 
     for (let i=0; i<e.images.length; i++) {
