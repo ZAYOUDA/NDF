@@ -164,6 +164,15 @@
   .lbx .cls { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 26px; cursor: pointer; background: none; border: none; opacity: .7; }
   .lbx .cls:hover { opacity: 1; }
 
+  /* ── Export month checkboxes ── */
+  .export-month-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border:0.5px solid #e8e8e8; border-radius:6px; cursor:pointer; transition:background .12s; }
+  .export-month-item:hover { background:#f8f8f8; }
+  .export-month-item input[type=checkbox] { width:15px; height:15px; accent-color:#0a0a0a; cursor:pointer; flex-shrink:0; }
+  .export-month-item label { font-size:13px; color:#0a0a0a; cursor:pointer; flex:1; }
+  .export-month-item .cnt { font-size:11px; color:#aaa; }
+  .export-select-all { font-size:11px; color:#666; cursor:pointer; text-decoration:underline; padding:2px 0; }
+  .export-select-all:hover { color:#0a0a0a; }
+
   /* ── Month bar ── */
   .month-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
   .month-tag {
@@ -217,8 +226,8 @@
     <span class="header-sub">Suivi des dépenses professionnelles</span>
   </div>
   <div class="header-right">
-    <a id="linkExcel" href="/api/export/excel" class="btn-ghost">↓ Excel</a>
-    <a id="linkPdf"   href="/api/export/pdf"   class="btn-ghost">↓ PDF Factures</a>
+    <button class="btn-ghost" onclick="openExport('excel')">↓ Excel</button>
+    <button class="btn-ghost" onclick="openExport('pdf')">↓ PDF Factures</button>
     <button class="btn-primary" onclick="openModal()">+ Nouvelle NDF</button>
   </div>
 </header>
@@ -370,6 +379,24 @@
     <div class="modal-foot">
       <button class="btn-cancel" onclick="closeModal()">Annuler</button>
       <button class="btn-save" id="btnSave" onclick="saveExpense()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Export -->
+<div class="overlay" id="exportOverlay" onclick="closeExportOverlay(event)">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-head">
+      <h2 id="exportTitle">Exporter</h2>
+      <button class="btn-close" onclick="closeExport()">×</button>
+    </div>
+    <div class="modal-body" style="gap:12px">
+      <p style="font-size:12px;color:#666">Sélectionnez les mois à inclure dans l'export :</p>
+      <div id="exportMonthList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeExport()">Annuler</button>
+      <button class="btn-save" onclick="doExport()">Exporter</button>
     </div>
   </div>
 </div>
@@ -720,6 +747,60 @@ function snapPhoto() {
     stopCam();
     toast('Photo capturée ✓');
   }, 'image/jpeg', 0.92);
+}
+
+// ── Export modal ─────────────────────────────────────────
+let exportType = 'excel';
+
+function openExport(type) {
+  exportType = type;
+  document.getElementById('exportTitle').textContent = type === 'excel' ? 'Exporter Excel' : 'Exporter PDF Factures';
+
+  // Construire la liste des mois disponibles
+  const months = [...new Set(expenses.map(e => e.mois).filter(Boolean))].sort().reverse();
+  const counts = {};
+  expenses.forEach(e => { if (e.mois) counts[e.mois] = (counts[e.mois]||0)+1; });
+
+  const list = document.getElementById('exportMonthList');
+  if (!months.length) {
+    list.innerHTML = '<p style="font-size:12px;color:#aaa;padding:8px">Aucun mois disponible</p>';
+  } else {
+    list.innerHTML = `
+      <div style="display:flex;justify-content:space-between;padding:0 2px 4px">
+        <span class="export-select-all" onclick="exportToggleAll(true)">Tout sélectionner</span>
+        <span class="export-select-all" onclick="exportToggleAll(false)">Tout désélectionner</span>
+      </div>
+      ${months.map(m => `
+        <div class="export-month-item" onclick="toggleExportMonth('${m}')">
+          <input type="checkbox" id="em_${m}" value="${m}" checked>
+          <label for="em_${m}">${formatMois(m)}</label>
+          <span class="cnt">${counts[m]||0} NDF</span>
+        </div>
+      `).join('')}
+    `;
+  }
+  document.getElementById('exportOverlay').classList.add('open');
+}
+
+function toggleExportMonth(m) {
+  const cb = document.getElementById('em_' + m);
+  if (cb) cb.checked = !cb.checked;
+}
+
+function exportToggleAll(checked) {
+  document.querySelectorAll('#exportMonthList input[type=checkbox]').forEach(cb => cb.checked = checked);
+}
+
+function closeExport() { document.getElementById('exportOverlay').classList.remove('open'); }
+function closeExportOverlay(e) { if (e.target === document.getElementById('exportOverlay')) closeExport(); }
+
+function doExport() {
+  const selected = [...document.querySelectorAll('#exportMonthList input[type=checkbox]:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('Sélectionnez au moins un mois.'); return; }
+  const ext  = exportType === 'excel' ? 'excel' : 'pdf';
+  const qs   = selected.map(m => `mois[]=${m}`).join('&');
+  window.location.href = `/api/export/${ext}?${qs}`;
+  closeExport();
 }
 
 // ── Lightbox ──────────────────────────────────────────────

@@ -186,8 +186,9 @@ app.delete('/api/expenses/:id', async (req, res) => {
 
 // ── Export Excel ──────────────────────────────────────────
 app.get('/api/export/excel', async (req, res) => {
-  let q = supabase.from('expenses').select('*').order('id');
-  if (req.query.mois) q = q.eq('mois', req.query.mois);
+  let q = supabase.from('expenses').select('*').order('mois').order('id');
+  const moisFilter = [].concat(req.query['mois[]'] || req.query.mois || []).filter(Boolean);
+  if (moisFilter.length) q = q.in('mois', moisFilter);
   const { data: rows } = await q;
   const expenses = (rows || []).map(mapRow);
 
@@ -280,8 +281,9 @@ function fetchImageBuffer(url, redirects = 5) {
 }
 
 app.get('/api/export/pdf', async (req, res) => {
-  let q = supabase.from('expenses').select('*').order('id');
-  if (req.query.mois) q = q.eq('mois', req.query.mois);
+  let q = supabase.from('expenses').select('*').order('mois').order('id');
+  const moisFilter = [].concat(req.query['mois[]'] || req.query.mois || []).filter(Boolean);
+  if (moisFilter.length) q = q.in('mois', moisFilter);
   const { data: rows } = await q;
   const expenses = (rows || []).map(mapRow);
 
