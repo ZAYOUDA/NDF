@@ -73,6 +73,7 @@ function mapRow(row) {
     description: row.description || '',
     client:      row.client      || '',
     projet:      row.projet      || '',
+    categorie:   row.categorie   || '',
     transport:   parseFloat(row.transport)  || 0,
     repas:       parseFloat(row.repas)      || 0,
     commentaire: row.commentaire || '',
@@ -100,7 +101,7 @@ app.get('/api/expenses', async (req, res) => {
 
 // ── API : ajout ───────────────────────────────────────────
 app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
-  const { description, client, projet, transport, repas, commentaire, vatLines } = req.body;
+  const { description, client, projet, categorie, transport, repas, commentaire, vatLines } = req.body;
   const parsedVat = JSON.parse(vatLines || '[]');
   const totals    = computeTotals(parsedVat);
   const images    = await uploadImages(req.files || []);
@@ -109,6 +110,7 @@ app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
     description:  description  || '',
     client:       client       || '',
     projet:       projet       || '',
+    categorie:    categorie    || '',
     transport:    parseFloat(transport) || 0,
     repas:        parseFloat(repas)     || 0,
     commentaire:  commentaire  || '',
@@ -129,7 +131,7 @@ app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
 // ── API : modification ────────────────────────────────────
 app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { description, client, projet, transport, repas, commentaire, vatLines, removeImages } = req.body;
+  const { description, client, projet, categorie, transport, repas, commentaire, vatLines, removeImages } = req.body;
 
   const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
   if (!existing) return res.status(404).json({ error: 'Non trouvé' });
@@ -148,6 +150,7 @@ app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
     description:  description  || '',
     client:       client       || '',
     projet:       projet       || '',
+    categorie:    categorie    || '',
     transport:    parseFloat(transport) || 0,
     repas:        parseFloat(repas)     || 0,
     commentaire:  commentaire  || '',
@@ -252,9 +255,13 @@ app.get('/api/export/excel', async (req, res) => {
 });
 
 // ── Export PDF ────────────────────────────────────────────
-function fetchImageBuffer(url) {
+function fetchImageBuffer(url, redirects = 5) {
   return new Promise((resolve, reject) => {
+    if (redirects === 0) return reject(new Error('Too many redirects'));
     https.get(url, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return resolve(fetchImageBuffer(res.headers.location, redirects - 1));
+      }
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve(Buffer.concat(chunks)));

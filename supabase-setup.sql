@@ -4,6 +4,7 @@ create table expenses (
   description  text    default '',
   client       text    default '',
   projet       text    default '',
+  categorie    text    default '',
   transport    numeric default 0,
   repas        numeric default 0,
   commentaire  text    default '',

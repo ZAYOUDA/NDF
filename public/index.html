@@ -9,53 +9,15 @@
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f4f4; color: #0a0a0a; min-height: 100vh; font-size: 13px; }
 
   /* ── Header ── */
-  .header {
-    background: #ffffff;
-    border-bottom: 0.5px solid #e4e4e4;
-    padding: 0 28px;
-    height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
+  .header { background: #fff; border-bottom: 0.5px solid #e4e4e4; padding: 0 28px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
   .header-left { display: flex; align-items: center; gap: 10px; }
   .header-logo { font-size: 14px; font-weight: 500; color: #0a0a0a; letter-spacing: -.2px; }
   .header-sep { width: 0.5px; height: 18px; background: #e0e0e0; }
   .header-sub { font-size: 11px; color: #999; }
   .header-right { display: flex; gap: 8px; }
-  .btn-ghost {
-    background: #f4f4f4;
-    border: 0.5px solid #e0e0e0;
-    color: #333;
-    padding: 6px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    font-family: inherit;
-    transition: background .15s, border-color .15s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .btn-ghost:hover { background: #ececec; border-color: #d0d0d0; }
-  .btn-primary {
-    background: #0a0a0a;
-    color: #fff;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    font-family: inherit;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: background .15s;
-  }
+  .btn-ghost { background: #f4f4f4; border: 0.5px solid #e0e0e0; color: #333; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; transition: background .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-ghost:hover { background: #ececec; }
+  .btn-primary { background: #0a0a0a; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: background .15s; }
   .btn-primary:hover { background: #222; }
 
   /* ── Layout ── */
@@ -63,11 +25,7 @@
 
   /* ── Stats ── */
   .stats { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px; }
-  .stat {
-    background: #f8f8f8;
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
+  .stat { background: #f8f8f8; border-radius: 8px; padding: 12px 14px; }
   .stat .lbl { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .6px; }
   .stat .val { font-size: 18px; font-weight: 500; color: #0a0a0a; margin-top: 4px; line-height: 1; }
 
@@ -76,29 +34,18 @@
   .toolbar-title { font-size: 12px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: .6px; }
 
   /* ── Table ── */
-  .table-wrap { background: #fff; border: 0.5px solid #e4e4e4; border-radius: 8px; overflow-x: auto; }
+  .table-wrap { background: #fff; border: 0.5px solid #e4e4e4; border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1100px; }
   thead tr { background: #f4f4f4; border-top: 0.5px solid #e4e4e4; border-bottom: 0.5px solid #e4e4e4; }
-  thead th {
-    padding: 9px 14px;
-    text-align: left;
-    font-size: 10px;
-    font-weight: 500;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    white-space: nowrap;
-  }
+  thead th { padding: 9px 14px; text-align: left; font-size: 10px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
   thead th.r { text-align: right; }
   tbody tr { border-bottom: 0.5px solid #f0f0f0; transition: background .1s; }
   tbody tr:last-child { border-bottom: none; }
   tbody tr:hover { background: #fafafa; }
   tbody td { padding: 10px 14px; color: #333; vertical-align: middle; }
   tbody td.r { text-align: right; font-variant-numeric: tabular-nums; color: #0a0a0a; }
-  tbody td.muted { color: #aaa; }
-  .id-cell { font-size: 11px; color: #999; font-variant-numeric: tabular-nums; }
-  .label-cell { color: #0a0a0a; }
-  .label-cell .client { font-size: 11px; color: #888; margin-top: 1px; }
+  .id-cell { font-size: 11px; color: #999; }
+  .label-cell .sub { font-size: 11px; color: #888; margin-top: 1px; }
   .amount { font-weight: 500; }
   .tva-val { color: #555; }
   .tva-empty { color: #ccc; }
@@ -106,266 +53,152 @@
   .thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 0.5px solid #e4e4e4; cursor: pointer; transition: opacity .15s; }
   .thumb:hover { opacity: .7; }
   .actions { display: flex; gap: 4px; }
-  .btn-row {
-    background: none;
-    border: 0.5px solid #e4e4e4;
-    border-radius: 5px;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 11px;
-    color: #666;
-    font-family: inherit;
-    transition: all .12s;
-  }
+  .btn-row { background: none; border: 0.5px solid #e4e4e4; border-radius: 5px; padding: 4px 8px; cursor: pointer; font-size: 11px; color: #666; font-family: inherit; transition: all .12s; white-space: nowrap; }
   .btn-row:hover { background: #f4f4f4; border-color: #d0d0d0; color: #0a0a0a; }
   .btn-row.del:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
   .empty { text-align: center; padding: 52px; color: #bbb; }
   .empty .ico { font-size: 28px; margin-bottom: 10px; }
-  .empty p { font-size: 13px; }
 
-  /* ── Modal overlay ── */
-  .overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.35);
-    z-index: 100;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 32px 16px;
-    overflow-y: auto;
-  }
+  /* ── Overlay / Modal ── */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
   .overlay.open { display: flex; }
-  .modal {
-    background: #fff;
-    border: 0.5px solid #e4e4e4;
-    border-radius: 10px;
-    width: 100%;
-    max-width: 600px;
-    margin: auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,.12);
-  }
-  .modal-head {
-    padding: 16px 20px;
-    border-bottom: 0.5px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .modal-head h2 { font-size: 14px; font-weight: 500; color: #0a0a0a; }
-  .btn-close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; line-height: 1; padding: 0 2px; }
+  .modal { background: #fff; border: 0.5px solid #e4e4e4; border-radius: 12px; width: 100%; max-width: 580px; margin: auto; box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+  .modal-head { padding: 16px 20px; border-bottom: 0.5px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .modal-head h2 { font-size: 14px; font-weight: 500; }
+  .btn-close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; line-height: 1; }
   .btn-close:hover { color: #333; }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+  .modal-foot { padding: 14px 20px; border-top: 0.5px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
 
-  /* ── Form ── */
-  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  /* ── Form sections ── */
+  .sec-label { font-size: 10px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: .8px; padding-bottom: 8px; border-bottom: 0.5px solid #f0f0f0; margin-bottom: 2px; }
   .form-section { display: flex; flex-direction: column; gap: 10px; }
-  .section-label {
-    font-size: 10px;
-    font-weight: 500;
-    color: #999;
-    text-transform: uppercase;
-    letter-spacing: .7px;
-    padding-bottom: 8px;
-    border-bottom: 0.5px solid #f0f0f0;
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .f { display: flex; flex-direction: column; gap: 5px; }
+  .f label { font-size: 11px; color: #666; }
+  .f input, .f select, .f textarea {
+    border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 9px 11px;
+    font-size: 13px; color: #0a0a0a; font-family: inherit; background: #fff; outline: none;
+    transition: border-color .15s; width: 100%;
   }
-  .form-row { display: grid; gap: 10px; }
-  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
-  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-  .form-field { display: flex; flex-direction: column; gap: 5px; }
-  .form-field label { font-size: 11px; color: #666; }
-  .form-field input,
-  .form-field select,
-  .form-field textarea {
-    border: 0.5px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 8px 11px;
-    font-size: 12px;
-    color: #0a0a0a;
-    font-family: inherit;
-    background: #fff;
-    outline: none;
-    transition: border-color .15s;
-  }
-  .form-field input:focus,
-  .form-field select:focus,
-  .form-field textarea:focus { border-color: #aaa; }
-  .form-field input::placeholder,
-  .form-field textarea::placeholder { color: #ccc; }
-  .form-field textarea { resize: vertical; min-height: 56px; }
+  .f input:focus, .f select:focus, .f textarea:focus { border-color: #aaa; }
+  .f input::placeholder, .f textarea::placeholder { color: #ccc; }
+  .f textarea { resize: vertical; min-height: 60px; }
 
-  /* ── VAT lines ── */
-  .vat-lines { display: flex; flex-direction: column; gap: 6px; }
-  .vat-line {
-    display: grid;
-    grid-template-columns: 130px 1fr 130px 28px;
-    gap: 8px;
-    align-items: center;
-    padding: 10px 12px;
-    background: #f8f8f8;
-    border: 0.5px solid #ebebeb;
-    border-radius: 6px;
+  /* ── TVA lines ── */
+  .vat-lines { display: flex; flex-direction: column; gap: 8px; }
+  .vat-line { background: #f8f8f8; border: 0.5px solid #ebebeb; border-radius: 8px; padding: 12px; }
+  .vat-line-top { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: flex-end; }
+  .vat-line-top select, .vat-line-top input {
+    border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 9px 11px;
+    font-size: 13px; font-family: inherit; background: #fff; outline: none; color: #0a0a0a; width: 100%;
   }
-  .vat-line select,
-  .vat-line input {
-    border: 0.5px solid #e0e0e0;
-    border-radius: 5px;
-    padding: 7px 10px;
-    font-size: 12px;
-    font-family: inherit;
-    background: #fff;
-    outline: none;
-    color: #0a0a0a;
+  .vat-line-top select:focus, .vat-line-top input:focus { border-color: #aaa; }
+  .vat-line-label { font-size: 11px; color: #666; margin-bottom: 5px; }
+  .btn-valider {
+    background: #0a0a0a; color: #fff; border: none; border-radius: 6px;
+    padding: 9px 14px; cursor: pointer; font-size: 12px; font-family: inherit;
+    white-space: nowrap; transition: background .15s; height: 40px;
   }
-  .vat-line select:focus,
-  .vat-line input:focus { border-color: #aaa; }
-  .vat-computed { text-align: right; }
-  .vat-computed span { display: block; font-size: 11px; color: #888; line-height: 1.5; }
-  .vat-computed span.strong { color: #0a0a0a; font-weight: 500; }
+  .btn-valider:hover { background: #333; }
   .btn-rm-vat {
-    background: none;
-    border: 0.5px solid #e0e0e0;
-    border-radius: 4px;
-    padding: 4px;
-    cursor: pointer;
-    color: #bbb;
-    font-size: 13px;
-    line-height: 1;
-    transition: all .12s;
+    background: none; border: 0.5px solid #e0e0e0; border-radius: 6px;
+    padding: 0; cursor: pointer; color: #bbb; font-size: 16px; line-height: 1;
     display: flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px;
+    width: 40px; height: 40px; flex-shrink: 0; transition: all .12s;
   }
   .btn-rm-vat:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
-  .btn-add-vat {
-    background: none;
-    border: 0.5px dashed #d0d0d0;
-    border-radius: 6px;
-    padding: 8px;
-    cursor: pointer;
-    color: #888;
-    font-size: 12px;
-    font-family: inherit;
-    width: 100%;
-    text-align: center;
-    transition: all .15s;
-    margin-top: 2px;
+  .vat-result {
+    display: none; margin-top: 10px; padding: 10px 12px;
+    background: #fff; border: 0.5px solid #e8e8e8; border-radius: 6px;
+    display: none; gap: 0; flex-direction: column;
   }
+  .vat-result.show { display: flex; }
+  .vat-result-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 0.5px solid #f4f4f4; }
+  .vat-result-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .vat-result-row .rlbl { font-size: 11px; color: #888; }
+  .vat-result-row .rval { font-size: 13px; font-weight: 500; color: #0a0a0a; font-variant-numeric: tabular-nums; }
+  .btn-add-vat { background: none; border: 0.5px dashed #d0d0d0; border-radius: 6px; padding: 9px; cursor: pointer; color: #888; font-size: 12px; font-family: inherit; width: 100%; text-align: center; transition: all .15s; }
   .btn-add-vat:hover { border-color: #aaa; color: #333; background: #fafafa; }
 
-  /* ── Upload ── */
-  .upload-zone {
-    border: 0.5px dashed #d0d0d0;
-    border-radius: 6px;
-    padding: 16px;
-    text-align: center;
-    cursor: pointer;
-    position: relative;
-    transition: all .15s;
-  }
+  /* ── Upload / Camera ── */
+  .upload-zone { border: 0.5px dashed #d0d0d0; border-radius: 6px; padding: 16px; text-align: center; cursor: pointer; position: relative; transition: all .15s; }
   .upload-zone:hover, .upload-zone.drag { border-color: #888; background: #fafafa; }
-  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .upload-zone p { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-zone p { font-size: 12px; color: #aaa; margin-top: 4px; }
   .upload-zone strong { color: #555; }
-  .btn-cam {
-    background: none;
-    border: 0.5px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 8px;
-    cursor: pointer;
-    color: #888;
-    font-size: 12px;
-    font-family: inherit;
-    width: 100%;
-    text-align: center;
-    transition: all .15s;
-    margin-top: 6px;
-  }
-  .btn-cam:hover { border-color: #aaa; color: #333; background: #fafafa; }
-  #camBox { display: none; margin-top: 10px; text-align: center; }
-  #camBox video { width: 100%; border-radius: 6px; max-height: 200px; object-fit: cover; border: 0.5px solid #e4e4e4; }
-  .btn-snap { margin-top: 8px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 12px; font-family: inherit; }
-  #canvas { display: none; }
-  .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; margin-top: 10px; }
-  .prev-item { position: relative; }
-  .prev-item img { width: 100%; height: 72px; object-fit: cover; border-radius: 5px; border: 0.5px solid #e4e4e4; cursor: pointer; }
-  .prev-item .rm {
-    position: absolute; top: -5px; right: -5px;
-    background: #0a0a0a; color: #fff;
-    border: none; border-radius: 50%;
-    width: 18px; height: 18px; font-size: 10px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
 
-  /* ── Modal footer ── */
-  .modal-foot {
-    padding: 14px 20px;
-    border-top: 0.5px solid #f0f0f0;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 8px;
+  .cam-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-cam-action {
+    flex: 1; background: none; border: 0.5px solid #e0e0e0; border-radius: 6px;
+    padding: 9px 12px; cursor: pointer; color: #666; font-size: 12px; font-family: inherit;
+    text-align: center; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .btn-cancel { background: none; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 12px; font-family: inherit; color: #666; transition: all .12s; }
+  .btn-cam-action:hover { border-color: #aaa; color: #333; background: #fafafa; }
+
+  /* Camera stream (desktop) */
+  #camBox { display: none; margin-top: 10px; border: 0.5px solid #e4e4e4; border-radius: 8px; overflow: hidden; }
+  #camBox video { width: 100%; display: block; max-height: 240px; object-fit: cover; background: #000; }
+  .cam-controls { display: flex; gap: 8px; padding: 10px; background: #f8f8f8; }
+  .btn-snap { flex: 1; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 500; }
+  .btn-stop-cam { background: none; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 10px 14px; cursor: pointer; font-size: 12px; font-family: inherit; color: #666; }
+  #canvas { display: none; }
+
+  .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; margin-top: 10px; }
+  .prev-item { position: relative; }
+  .prev-item img { width: 100%; height: 76px; object-fit: cover; border-radius: 6px; border: 0.5px solid #e4e4e4; cursor: pointer; display: block; }
+  .prev-item .rm { position: absolute; top: -6px; right: -6px; background: #0a0a0a; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* ── Footer buttons ── */
+  .btn-cancel { background: none; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 12px; font-family: inherit; color: #666; }
   .btn-cancel:hover { background: #f4f4f4; }
-  .btn-save { background: #0a0a0a; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 12px; font-family: inherit; transition: background .15s; }
+  .btn-save { background: #0a0a0a; color: #fff; border: none; border-radius: 6px; padding: 9px 18px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 500; }
   .btn-save:hover { background: #222; }
   .btn-save:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ── Lightbox ── */
-  .lbx { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 200; align-items: center; justify-content: center; }
+  .lbx { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 200; align-items: center; justify-content: center; }
   .lbx.open { display: flex; }
   .lbx img { max-width: 90vw; max-height: 90vh; border-radius: 6px; object-fit: contain; }
-  .lbx .cls { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 24px; cursor: pointer; background: none; border: none; opacity: .7; }
+  .lbx .cls { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 26px; cursor: pointer; background: none; border: none; opacity: .7; }
   .lbx .cls:hover { opacity: 1; }
 
   /* ── Toast ── */
   .toast { position: fixed; bottom: 20px; right: 20px; background: #0a0a0a; color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 12px; z-index: 300; transform: translateY(60px); transition: transform .25s; pointer-events: none; }
   .toast.show { transform: translateY(0); }
 
-  /* ── Responsive mobile ── */
+  /* ── Mobile ── */
   @media (max-width: 640px) {
     .header { padding: 10px 14px; height: auto; flex-wrap: wrap; gap: 8px; }
     .header-sep, .header-sub { display: none; }
-    .header-logo { font-size: 15px; }
     .header-right { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-    .btn-ghost, .btn-primary { padding: 9px 4px; font-size: 11px; justify-content: center; width: 100%; text-align: center; }
-
+    .btn-ghost, .btn-primary { padding: 9px 4px; font-size: 11px; justify-content: center; width: 100%; }
     .page { padding: 12px; }
-
-    .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .stat { padding: 10px 12px; }
+    .stats { grid-template-columns: 1fr 1fr; }
     .stat .val { font-size: 15px; }
-
     .toolbar { flex-direction: column; align-items: flex-start; gap: 8px; }
-
-    .table-wrap { -webkit-overflow-scrolling: touch; }
-    table { font-size: 11px; }
-    thead th, tbody td { padding: 8px 10px; }
-
     .overlay { padding: 0; align-items: flex-end; }
     .modal { border-radius: 14px 14px 0 0; max-width: 100%; max-height: 96vh; overflow-y: auto; }
-    .modal-body { padding: 16px; gap: 14px; }
-    .modal-foot { padding: 12px 16px; }
+    .modal-body { padding: 14px; gap: 14px; }
     .modal-head { padding: 14px 16px; }
-
-    .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
-
-    .vat-line { grid-template-columns: 1fr 1fr; }
-    .vat-computed { grid-column: 1 / -1; display: flex; gap: 16px; text-align: left; }
-
+    .modal-foot { padding: 12px 14px; }
+    .row2, .row3 { grid-template-columns: 1fr; }
+    .vat-line-top { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 8px; }
+    .btn-valider { grid-column: 1; }
+    .btn-rm-vat { grid-column: 2; justify-self: end; grid-row: 1; }
+    .cam-btns { flex-direction: column; }
     .toast { left: 12px; right: 12px; bottom: 12px; text-align: center; }
   }
-
   @media (max-width: 380px) {
     .header-right { grid-template-columns: 1fr 1fr; }
-    .btn-primary { grid-column: 1 / -1; }
+    .btn-primary { grid-column: 1/-1; }
     .stats { grid-template-columns: 1fr 1fr; }
-    .stat .val { font-size: 13px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <header class="header">
   <div class="header-left">
     <span class="header-logo">Notes de Frais</span>
@@ -380,10 +213,8 @@
 </header>
 
 <div class="page">
-
-  <!-- Stats -->
   <div class="stats">
-    <div class="stat"><div class="lbl">NDF</div><div class="val" id="sCount">0</div></div>
+    <div class="stat"><div class="lbl">NDF</div><div class="val" id="sCount">—</div></div>
     <div class="stat"><div class="lbl">Transport</div><div class="val" id="sTransport">—</div></div>
     <div class="stat"><div class="lbl">Repas</div><div class="val" id="sRepas">—</div></div>
     <div class="stat"><div class="lbl">Total TTC</div><div class="val" id="sTTC">—</div></div>
@@ -392,18 +223,15 @@
     <div class="stat"><div class="lbl">TVA 20%</div><div class="val" id="sTva20">—</div></div>
   </div>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <span class="toolbar-title">Liste des NDF</span>
-  </div>
+  <div class="toolbar"><span class="toolbar-title">Liste des NDF</span></div>
 
-  <!-- Table -->
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
           <th>ID</th>
           <th>Description / Client / Projet</th>
+          <th>Catégorie</th>
           <th class="r">Transport (TTC)</th>
           <th class="r">Repas (TTC)</th>
           <th>Commentaire</th>
@@ -418,11 +246,10 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="13"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>
+        <tr><td colspan="14"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>
       </tbody>
     </table>
   </div>
-
 </div>
 
 <!-- Modal -->
@@ -437,73 +264,87 @@
 
       <!-- Identification -->
       <div class="form-section">
-        <div class="section-label">Identification</div>
-        <div class="form-row">
-          <div class="form-field">
-            <label>Description</label>
-            <input type="text" id="fDesc" placeholder="Libellé de la dépense">
-          </div>
+        <div class="sec-label">Identification</div>
+        <div class="f"><label>Description</label><input type="text" id="fDesc" placeholder="Libellé de la dépense"></div>
+        <div class="row2">
+          <div class="f"><label>Client</label><input type="text" id="fClient" placeholder="Nom du client"></div>
+          <div class="f"><label>Projet</label><input type="text" id="fProjet" placeholder="Nom du projet"></div>
         </div>
-        <div class="form-row cols-2">
-          <div class="form-field">
-            <label>Client</label>
-            <input type="text" id="fClient" placeholder="Nom du client">
-          </div>
-          <div class="form-field">
-            <label>Projet</label>
-            <input type="text" id="fProjet" placeholder="Nom du projet">
-          </div>
+        <div class="f">
+          <label>Catégorie</label>
+          <select id="fCategorie">
+            <option value="">— Sélectionner —</option>
+            <option value="Transport">Transport</option>
+            <option value="Repas">Repas</option>
+            <option value="Hébergement">Hébergement</option>
+            <option value="Carburant">Carburant</option>
+            <option value="Fournitures">Fournitures</option>
+            <option value="Formation">Formation</option>
+            <option value="Communication">Communication</option>
+            <option value="Autre">Autre</option>
+          </select>
         </div>
       </div>
 
       <!-- Montants -->
       <div class="form-section">
-        <div class="section-label">Montants par catégorie (TTC)</div>
-        <div class="form-row cols-2">
-          <div class="form-field">
+        <div class="sec-label">Montants (TTC)</div>
+        <div class="row2">
+          <div class="f">
             <label>Transport (€ TTC)</label>
-            <input type="number" id="fTransport" step="0.01" min="0" placeholder="0,00">
+            <input type="number" id="fTransport" step="0.01" min="0" placeholder="0,00" oninput="onAmountChange()">
           </div>
-          <div class="form-field">
+          <div class="f">
             <label>Repas (€ TTC)</label>
-            <input type="number" id="fRepas" step="0.01" min="0" placeholder="0,00">
+            <input type="number" id="fRepas" step="0.01" min="0" placeholder="0,00" oninput="onAmountChange()">
           </div>
         </div>
       </div>
 
       <!-- TVA -->
       <div class="form-section">
-        <div class="section-label">Ventilation TVA</div>
+        <div class="sec-label">Ventilation TVA</div>
         <div class="vat-lines" id="vatLines"></div>
         <button class="btn-add-vat" onclick="addVatLine()">+ Ajouter une ligne TVA</button>
       </div>
 
       <!-- Commentaire -->
       <div class="form-section">
-        <div class="section-label">Commentaire</div>
-        <div class="form-row">
-          <div class="form-field">
-            <textarea id="fComment" placeholder="Remarques, précisions..."></textarea>
-          </div>
-        </div>
+        <div class="sec-label">Commentaire</div>
+        <div class="f"><textarea id="fComment" placeholder="Remarques, précisions..."></textarea></div>
       </div>
 
       <!-- Justificatifs -->
       <div class="form-section">
-        <div class="section-label">Justificatifs</div>
+        <div class="sec-label">Justificatifs</div>
         <div class="upload-zone" id="dropZone" ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
           <input type="file" id="fileInput" accept="image/*" multiple onchange="onFileSelect(event)">
           <p><strong>Cliquez</strong> ou glissez vos images ici</p>
           <p>JPG, PNG, WEBP — max 20 Mo</p>
         </div>
-        <button type="button" class="btn-cam" onclick="toggleCam()">📷 Prendre une photo</button>
-        <div id="camBox">
-          <video id="video" autoplay playsinline></video>
-          <canvas id="canvas"></canvas>
-          <br>
-          <button type="button" class="btn-snap" onclick="snapPhoto()">Capturer</button>
-          <button type="button" class="btn-cancel" style="margin-left:8px;background:none;border:0.5px solid #e0e0e0;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:12px;font-family:inherit;" onclick="stopCam()">Annuler</button>
+
+        <div class="cam-btns">
+          <!-- Mobile : ouvre directement la caméra -->
+          <label class="btn-cam-action" id="btnCamMobile">
+            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="onFileSelect(event)">
+            📷 Appareil photo
+          </label>
+          <!-- Desktop : flux vidéo -->
+          <button type="button" class="btn-cam-action" id="btnCamDesktop" onclick="toggleCam()">
+            🎥 Caméra en direct
+          </button>
         </div>
+
+        <!-- Flux caméra desktop -->
+        <div id="camBox">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="canvas"></canvas>
+          <div class="cam-controls">
+            <button type="button" class="btn-snap" onclick="snapPhoto()">📸 Capturer la photo</button>
+            <button type="button" class="btn-stop-cam" onclick="stopCam()">Fermer</button>
+          </div>
+        </div>
+
         <div class="preview-grid" id="previewGrid"></div>
       </div>
     </div>
@@ -524,62 +365,65 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const VAT_RATES = [2.6, 5.5, 10, 20];
-let expenses = [];
-let newFiles = [];
+const VAT_RATES   = [2.6, 5.5, 10, 20];
+const CATEGORIES  = ['Transport','Repas','Hébergement','Carburant','Fournitures','Formation','Communication','Autre'];
+let expenses      = [];
+let newFiles      = [];
 let removedImages = [];
-let camStream = null;
+let camStream     = null;
 
+// ── Helpers ──────────────────────────────────────────────
+function money(n) {
+  if (!n && n !== 0) return '—';
+  return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function totalTTC() {
+  return (parseFloat(document.getElementById('fTransport').value)||0)
+       + (parseFloat(document.getElementById('fRepas').value)||0);
+}
+
+// ── Load ─────────────────────────────────────────────────
 async function load() {
   expenses = await fetch('/api/expenses').then(r => r.json());
   renderStats();
   renderTable();
 }
 
-function money(n) {
-  if (!n) return '—';
-  return (n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ── Stats ──
 function renderStats() {
-  const e = expenses;
-  const sum = k => e.reduce((s,x) => s + (x[k]||0), 0);
-  document.getElementById('sCount').textContent      = e.length || '—';
-  document.getElementById('sTransport').textContent  = money(sum('transport'));
-  document.getElementById('sRepas').textContent      = money(sum('repas'));
-  document.getElementById('sTTC').textContent        = money(sum('totalTTC'));
-  document.getElementById('sHT').textContent         = money(sum('totalHT'));
-  document.getElementById('sTva10').textContent      = money(sum('tva_10'));
-  document.getElementById('sTva20').textContent      = money(sum('tva_20'));
+  const sum = k => expenses.reduce((s,x) => s+(x[k]||0), 0);
+  document.getElementById('sCount').textContent     = expenses.length || '—';
+  document.getElementById('sTransport').textContent = money(sum('transport'));
+  document.getElementById('sRepas').textContent     = money(sum('repas'));
+  document.getElementById('sTTC').textContent       = money(sum('totalTTC'));
+  document.getElementById('sHT').textContent        = money(sum('totalHT'));
+  document.getElementById('sTva10').textContent     = money(sum('tva_10'));
+  document.getElementById('sTva20').textContent     = money(sum('tva_20'));
 }
 
-// ── Table ──
 function renderTable() {
   const tbody = document.getElementById('tbody');
   if (!expenses.length) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = expenses.map(e => {
-    const descLine = esc(e.description || '');
-    const subLine  = [e.client, e.projet].filter(Boolean).map(esc).join(' · ');
-    const tva10 = e.tva_10  || 0;
-    const tva20 = e.tva_20  || 0;
-    const tva26 = e.tva_2_6 || 0;
-    const tva55 = e.tva_5_5 || 0;
+    const label  = esc(e.description || '');
+    const sub    = [e.client, e.projet].filter(Boolean).map(esc).join(' · ');
+    const tva10  = e.tva_10  || 0;
+    const tva20  = e.tva_20  || 0;
+    const tva26  = e.tva_2_6 || 0;
+    const tva55  = e.tva_5_5 || 0;
     return `<tr>
       <td class="id-cell">${e.id}</td>
       <td class="label-cell">
-        ${descLine ? `<div>${descLine}</div>` : ''}
-        ${subLine  ? `<div class="client">${subLine}</div>` : (!descLine ? '<span style="color:#ccc">—</span>' : '')}
+        ${label ? `<div>${label}</div>` : ''}
+        ${sub   ? `<div class="sub">${sub}</div>` : (!label ? '<span style="color:#ccc">—</span>' : '')}
       </td>
+      <td><span style="font-size:11px;color:#666">${esc(e.categorie||'')}</span></td>
       <td class="r amount">${e.transport ? money(e.transport) : '<span class="tva-empty">—</span>'}</td>
       <td class="r amount">${e.repas     ? money(e.repas)     : '<span class="tva-empty">—</span>'}</td>
-      <td class="muted" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.commentaire)||'—'}</td>
+      <td style="color:#aaa;font-size:11px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.commentaire)||'—'}</td>
       <td class="r amount">${money(e.totalTTC)}</td>
       <td class="r" style="color:#666">${money(e.totalHT)}</td>
       <td class="r ${tva10?'tva-val':'tva-empty'}">${tva10 ? money(tva10) : '—'}</td>
@@ -588,8 +432,8 @@ function renderTable() {
       <td class="r ${tva55?'tva-val':'tva-empty'}">${tva55 ? money(tva55) : '—'}</td>
       <td>
         <div class="thumb-list">
-          ${e.images.map(img=>`<img class="thumb" src="/uploads/${img}" onclick="openLbx('/uploads/${img}')">`).join('')}
-          ${!e.images.length ? '<span class="tva-empty">—</span>' : ''}
+          ${(e.images||[]).map(url=>`<img class="thumb" src="${url}" onclick="openLbx('${url}')">`).join('')}
+          ${!(e.images||[]).length ? '<span class="tva-empty">—</span>' : ''}
         </div>
       </td>
       <td>
@@ -602,45 +446,43 @@ function renderTable() {
   }).join('');
 }
 
-// ── Modal ──
+// ── Modal ─────────────────────────────────────────────────
 function openModal(exp = null) {
   newFiles = []; removedImages = [];
   document.getElementById('previewGrid').innerHTML = '';
-  document.getElementById('vatLines').innerHTML = '';
-  document.getElementById('editId').value = '';
+  document.getElementById('vatLines').innerHTML    = '';
+  document.getElementById('editId').value          = '';
   document.getElementById('modalTitle').textContent = 'Nouvelle Note de Frais';
-  document.getElementById('fDesc').value      = '';
-  document.getElementById('fClient').value    = '';
-  document.getElementById('fProjet').value    = '';
+  ['fDesc','fClient','fProjet','fComment'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fTransport').value = '';
   document.getElementById('fRepas').value     = '';
-  document.getElementById('fComment').value   = '';
+  document.getElementById('fCategorie').value = '';
   stopCam();
 
   if (exp) {
     document.getElementById('modalTitle').textContent = `Modifier NDF #${exp.id}`;
-    document.getElementById('editId').value    = exp.id;
-    document.getElementById('fDesc').value     = exp.description;
-    document.getElementById('fClient').value   = exp.client;
-    document.getElementById('fProjet').value   = exp.projet;
-    document.getElementById('fTransport').value = exp.transport || '';
-    document.getElementById('fRepas').value     = exp.repas || '';
-    document.getElementById('fComment').value   = exp.commentaire;
-    (exp.vatLines || []).forEach(l => addVatLine(l.rate, l.ttc));
-    exp.images.forEach(img => addPreview(`/uploads/${img}`, img, true));
+    document.getElementById('editId').value      = exp.id;
+    document.getElementById('fDesc').value       = exp.description;
+    document.getElementById('fClient').value     = exp.client;
+    document.getElementById('fProjet').value     = exp.projet;
+    document.getElementById('fCategorie').value  = exp.categorie || '';
+    document.getElementById('fTransport').value  = exp.transport || '';
+    document.getElementById('fRepas').value      = exp.repas || '';
+    document.getElementById('fComment').value    = exp.commentaire;
+    (exp.vatLines||[]).forEach(l => addVatLine(l.rate, l.ttc, true));
+    (exp.images||[]).forEach(url => addPreview(url, url, true));
   }
   document.getElementById('overlay').classList.add('open');
 }
 
 function closeModal() { stopCam(); document.getElementById('overlay').classList.remove('open'); }
-function closeOverlay(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
-function editExp(id) { openModal(expenses.find(e => e.id === id)); }
+function closeOverlay(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+function editExp(id)  { openModal(expenses.find(e => e.id === id)); }
 
 async function delExp(id) {
   if (!confirm('Supprimer cette NDF ?')) return;
   await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
-  toast('NDF supprimée');
-  load();
+  toast('NDF supprimée'); load();
 }
 
 async function saveExpense() {
@@ -649,8 +491,8 @@ async function saveExpense() {
 
   const vatLines = [];
   document.querySelectorAll('.vat-line').forEach(row => {
-    const rate = parseFloat(row.querySelector('.vat-rate').value);
-    const ttc  = parseFloat(row.querySelector('.vat-ttc').value) || 0;
+    const rate = parseFloat(row.querySelector('.vr-rate').value);
+    const ttc  = parseFloat(row.querySelector('.vr-ttc').value) || 0;
     if (ttc > 0) vatLines.push({ rate, ttc });
   });
 
@@ -659,6 +501,7 @@ async function saveExpense() {
   fd.append('description', document.getElementById('fDesc').value);
   fd.append('client',      document.getElementById('fClient').value);
   fd.append('projet',      document.getElementById('fProjet').value);
+  fd.append('categorie',   document.getElementById('fCategorie').value);
   fd.append('transport',   document.getElementById('fTransport').value || '0');
   fd.append('repas',       document.getElementById('fRepas').value || '0');
   fd.append('commentaire', document.getElementById('fComment').value);
@@ -668,60 +511,75 @@ async function saveExpense() {
   if (id) {
     fd.append('removeImages', JSON.stringify(removedImages));
     await fetch(`/api/expenses/${id}`, { method: 'PUT', body: fd });
-    toast('NDF mise à jour');
+    toast('NDF mise à jour ✓');
   } else {
     await fetch('/api/expenses', { method: 'POST', body: fd });
-    toast('NDF ajoutée');
+    toast('NDF ajoutée ✓');
   }
-
   btn.disabled = false; btn.textContent = 'Enregistrer';
   closeModal(); load();
 }
 
-// ── VAT ──
-function addVatLine(rate = 20, ttc = '') {
+// ── TVA lines ─────────────────────────────────────────────
+function onAmountChange() {
+  // Met à jour le TTC de toutes les lignes TVA non encore validées
+  document.querySelectorAll('.vat-line').forEach(row => {
+    if (!row.dataset.validated) {
+      row.querySelector('.vr-ttc').value = totalTTC() || '';
+    }
+  });
+}
+
+function addVatLine(rate = 20, ttc = '', validated = false) {
   const c = document.getElementById('vatLines');
   const d = document.createElement('div');
   d.className = 'vat-line';
+  if (validated) d.dataset.validated = '1';
+
+  const ttcVal = ttc || totalTTC() || '';
+
   d.innerHTML = `
-    <select class="vat-rate" onchange="recompute(this)">
-      ${VAT_RATES.map(r=>`<option value="${r}"${r==rate?' selected':''}>${r}%</option>`).join('')}
-    </select>
-    <div class="form-field" style="gap:3px">
-      <label style="font-size:10px;color:#aaa">Montant TTC (€)</label>
-      <input type="number" class="vat-ttc" step="0.01" min="0" placeholder="0,00" value="${ttc}" oninput="recompute(this)">
+    <div class="vat-line-top">
+      <div>
+        <div class="vat-line-label">Taux TVA</div>
+        <select class="vr-rate">
+          ${VAT_RATES.map(r=>`<option value="${r}"${r==rate?' selected':''}>${r}%</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div class="vat-line-label">Montant TTC (€)</div>
+        <input type="number" class="vr-ttc" step="0.01" min="0" placeholder="0,00" value="${ttcVal}">
+      </div>
+      <button class="btn-valider" onclick="validerLigne(this)">Calculer</button>
+      <button class="btn-rm-vat" onclick="this.closest('.vat-line').remove()" title="Supprimer">×</button>
     </div>
-    <div class="vat-computed">
-      <span class="vc-ht">HT —</span>
-      <span class="vc-tva">TVA —</span>
+    <div class="vat-result">
+      <div class="vat-result-row"><span class="rlbl">Montant TTC</span><span class="rval rv-ttc">—</span></div>
+      <div class="vat-result-row"><span class="rlbl">Montant HT</span><span class="rval rv-ht">—</span></div>
+      <div class="vat-result-row"><span class="rlbl" id=""></span><span class="rval rv-tva">—</span></div>
     </div>
-    <button class="btn-rm-vat" onclick="this.parentElement.remove()" title="Supprimer">×</button>
   `;
   c.appendChild(d);
-  recompute(d.querySelector('.vat-ttc'));
+  if (validated && ttc) validerLigne(d.querySelector('.btn-valider'));
 }
 
-function recompute(el) {
-  const row  = el.closest('.vat-line');
-  const rate = parseFloat(row.querySelector('.vat-rate').value) || 0;
-  const ttc  = parseFloat(row.querySelector('.vat-ttc').value)  || 0;
+function validerLigne(btn) {
+  const row  = btn.closest('.vat-line');
+  const rate = parseFloat(row.querySelector('.vr-rate').value) || 0;
+  const ttc  = parseFloat(row.querySelector('.vr-ttc').value)  || 0;
   const ht   = ttc / (1 + rate / 100);
   const tva  = ttc - ht;
-  const comp = row.querySelector('.vat-computed');
-  if (ttc) {
-    comp.querySelector('.vc-ht').textContent  = `HT ${ht.toFixed(2)} €`;
-    comp.querySelector('.vc-tva').textContent = `TVA ${tva.toFixed(2)} €`;
-    comp.querySelector('.vc-ht').className  = 'vc-ht strong';
-    comp.querySelector('.vc-tva').className = 'vc-tva';
-  } else {
-    comp.querySelector('.vc-ht').textContent  = 'HT —';
-    comp.querySelector('.vc-tva').textContent = 'TVA —';
-    comp.querySelector('.vc-ht').className  = 'vc-ht';
-    comp.querySelector('.vc-tva').className = 'vc-tva';
-  }
+
+  row.dataset.validated = '1';
+  const res = row.querySelector('.vat-result');
+  res.querySelector('.rv-ttc').textContent = money(ttc);
+  res.querySelector('.rv-ht').textContent  = money(ht);
+  res.querySelector('.rv-tva').textContent = `TVA ${rate}% : ${money(tva)}`;
+  res.querySelector('.rlbl:last-of-type') && (res.querySelectorAll('.rlbl')[2].textContent = `TVA ${rate}%`);
+  res.classList.add('show');
 }
 
-// ── Files ──
+// ── Files ─────────────────────────────────────────────────
 function onFileSelect(e) { Array.from(e.target.files).forEach(addFile); e.target.value=''; }
 function onDragOver(e)   { e.preventDefault(); document.getElementById('dropZone').classList.add('drag'); }
 function onDragLeave()   { document.getElementById('dropZone').classList.remove('drag'); }
@@ -734,51 +592,55 @@ function addFile(file) {
 function addPreview(src, name, isExisting) {
   const g = document.getElementById('previewGrid');
   const d = document.createElement('div');
-  d.className = 'prev-item'; d.dataset.name = name; d.dataset.ex = isExisting ? '1' : '0';
+  d.className = 'prev-item'; d.dataset.name = name; d.dataset.ex = isExisting?'1':'0';
   d.innerHTML = `<img src="${src}" onclick="openLbx('${src}')"><button class="rm" onclick="rmPreview(this)">×</button>`;
   g.appendChild(d);
 }
 function rmPreview(btn) {
   const item = btn.parentElement;
-  if (item.dataset.ex === '1') removedImages.push(item.dataset.name);
+  if (item.dataset.ex==='1') removedImages.push(item.dataset.name);
   else newFiles = newFiles.filter(f => f.name !== item.dataset.name);
   item.remove();
 }
 
-// ── Camera ──
+// ── Camera ────────────────────────────────────────────────
 async function toggleCam() {
-  document.getElementById('camBox').style.display === 'block' ? stopCam() : startCam();
-}
-async function startCam() {
+  if (camStream) { stopCam(); return; }
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment', width:{ideal:1280} } });
     document.getElementById('video').srcObject = camStream;
     document.getElementById('camBox').style.display = 'block';
-  } catch(e) { alert('Caméra inaccessible : ' + e.message); }
+    document.getElementById('btnCamDesktop').textContent = '🎥 Fermer caméra';
+  } catch(e) {
+    alert('Caméra inaccessible. Utilisez "Appareil photo" pour prendre une photo directement.');
+  }
 }
 function stopCam() {
   if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
   document.getElementById('camBox').style.display = 'none';
+  document.getElementById('btnCamDesktop').textContent = '🎥 Caméra en direct';
 }
 function snapPhoto() {
   const v=document.getElementById('video'), c=document.getElementById('canvas');
   c.width=v.videoWidth; c.height=v.videoHeight;
   c.getContext('2d').drawImage(v,0,0);
-  c.toBlob(blob=>{
-    addFile(new File([blob],`photo_${Date.now()}.jpg`,{type:'image/jpeg'}));
-    stopCam(); toast('Photo capturée');
-  },'image/jpeg',.92);
+  c.toBlob(blob => {
+    const file = new File([blob], `photo_${Date.now()}.jpg`, {type:'image/jpeg'});
+    addFile(file);
+    stopCam();
+    toast('Photo capturée ✓');
+  }, 'image/jpeg', 0.92);
 }
 
-// ── Lightbox ──
+// ── Lightbox ──────────────────────────────────────────────
 function openLbx(src) { document.getElementById('lbxImg').src=src; document.getElementById('lbx').classList.add('open'); }
 function closeLbx()   { document.getElementById('lbx').classList.remove('open'); }
 
-// ── Toast ──
+// ── Toast ─────────────────────────────────────────────────
 function toast(msg) {
   const el=document.getElementById('toast');
   el.textContent=msg; el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2200);
+  setTimeout(()=>el.classList.remove('show'), 2400);
 }
 
 load();
