@@ -164,6 +164,17 @@
   .lbx .cls { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 26px; cursor: pointer; background: none; border: none; opacity: .7; }
   .lbx .cls:hover { opacity: 1; }
 
+  /* ── Month bar ── */
+  .month-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .month-tag {
+    padding: 5px 13px; border-radius: 20px; font-size: 12px; cursor: pointer;
+    border: 0.5px solid #e0e0e0; background: #fff; color: #555;
+    transition: all .15s; white-space: nowrap;
+  }
+  .month-tag:hover { border-color: #aaa; color: #0a0a0a; }
+  .month-tag.active { background: #0a0a0a; color: #fff; border-color: #0a0a0a; }
+  .month-tag.all { font-weight: 500; }
+
   /* ── Toast ── */
   .toast { position: fixed; bottom: 20px; right: 20px; background: #0a0a0a; color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 12px; z-index: 300; transform: translateY(60px); transition: transform .25s; pointer-events: none; }
   .toast.show { transform: translateY(0); }
@@ -206,13 +217,16 @@
     <span class="header-sub">Suivi des dépenses professionnelles</span>
   </div>
   <div class="header-right">
-    <a href="/api/export/excel" class="btn-ghost">↓ Excel</a>
-    <a href="/api/export/pdf"   class="btn-ghost">↓ PDF Factures</a>
+    <a id="linkExcel" href="/api/export/excel" class="btn-ghost">↓ Excel</a>
+    <a id="linkPdf"   href="/api/export/pdf"   class="btn-ghost">↓ PDF Factures</a>
     <button class="btn-primary" onclick="openModal()">+ Nouvelle NDF</button>
   </div>
 </header>
 
 <div class="page">
+  <!-- Filtre mensuel -->
+  <div class="month-bar" id="monthBar"></div>
+
   <div class="stats">
     <div class="stat"><div class="lbl">NDF</div><div class="val" id="sCount">—</div></div>
     <div class="stat"><div class="lbl">Transport</div><div class="val" id="sTransport">—</div></div>
@@ -223,7 +237,7 @@
     <div class="stat"><div class="lbl">TVA 20%</div><div class="val" id="sTva20">—</div></div>
   </div>
 
-  <div class="toolbar"><span class="toolbar-title">Liste des NDF</span></div>
+  <div class="toolbar"><span class="toolbar-title" id="tableTitle">Liste des NDF</span></div>
 
   <div class="table-wrap">
     <table>
@@ -232,8 +246,8 @@
           <th>ID</th>
           <th>Description / Client / Projet</th>
           <th>Catégorie</th>
-          <th class="r">Transport (TTC)</th>
-          <th class="r">Repas (TTC)</th>
+          <th>Mois</th>
+          <th class="r">Montant (TTC)</th>
           <th>Commentaire</th>
           <th class="r">Total TTC</th>
           <th class="r">Total HT</th>
@@ -270,9 +284,14 @@
           <div class="f"><label>Client</label><input type="text" id="fClient" placeholder="Nom du client"></div>
           <div class="f"><label>Projet</label><input type="text" id="fProjet" placeholder="Nom du projet"></div>
         </div>
-        <div class="f">
-          <label>Catégorie</label>
-          <select id="fCategorie" onchange="onCategoryChange()">
+        <div class="row2">
+          <div class="f">
+            <label>Mois</label>
+            <input type="month" id="fMois">
+          </div>
+          <div class="f">
+            <label>Catégorie</label>
+            <select id="fCategorie" onchange="onCategoryChange()">
             <option value="">— Sélectionner —</option>
             <option value="Transport">Transport</option>
             <option value="Repas">Repas</option>
@@ -283,6 +302,7 @@
             <option value="Communication">Communication</option>
             <option value="Autre">Autre</option>
           </select>
+          </div>
         </div>
       </div>
 
@@ -364,11 +384,16 @@
 
 <script>
 const VAT_RATES   = [2.6, 5.5, 10, 20];
-const CATEGORIES  = ['Transport','Repas','Hébergement','Carburant','Fournitures','Formation','Communication','Autre'];
 let expenses      = [];
+let currentMois   = '';
 let newFiles      = [];
 let removedImages = [];
 let camStream     = null;
+
+function currentMonthDefault() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
 
 // ── Helpers ──────────────────────────────────────────────
 function money(n) {
@@ -400,13 +425,43 @@ function onCategoryChange() {
 // ── Load ─────────────────────────────────────────────────
 async function load() {
   expenses = await fetch('/api/expenses').then(r => r.json());
+  renderMonthBar();
+  renderStats();
+  renderTable();
+}
+
+function renderMonthBar() {
+  const months = [...new Set(expenses.map(e => e.mois).filter(Boolean))].sort().reverse();
+  const bar = document.getElementById('monthBar');
+  if (!months.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `
+    <button class="month-tag all ${!currentMois?'active':''}" onclick="setMois('')">Tous</button>
+    ${months.map(m => `<button class="month-tag ${currentMois===m?'active':''}" onclick="setMois('${m}')">${formatMois(m)}</button>`).join('')}
+  `;
+}
+
+function formatMois(m) {
+  if (!m) return '';
+  const [y, mo] = m.split('-');
+  const names = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  return `${names[parseInt(mo)-1]} ${y}`;
+}
+
+function setMois(m) {
+  currentMois = m;
+  const qs = m ? `?mois=${m}` : '';
+  document.getElementById('linkExcel').href = `/api/export/excel${qs}`;
+  document.getElementById('linkPdf').href   = `/api/export/pdf${qs}`;
+  document.getElementById('tableTitle').textContent = m ? `NDF — ${formatMois(m)}` : 'Liste des NDF';
+  renderMonthBar();
   renderStats();
   renderTable();
 }
 
 function renderStats() {
-  const sum = k => expenses.reduce((s,x) => s+(x[k]||0), 0);
-  document.getElementById('sCount').textContent     = expenses.length || '—';
+  const src = currentMois ? expenses.filter(e => e.mois === currentMois) : expenses;
+  const sum = k => src.reduce((s,x) => s+(x[k]||0), 0);
+  document.getElementById('sCount').textContent     = src.length || '—';
   document.getElementById('sTransport').textContent = money(sum('transport'));
   document.getElementById('sRepas').textContent     = money(sum('repas'));
   document.getElementById('sTTC').textContent       = money(sum('totalTTC'));
@@ -421,13 +476,19 @@ function renderTable() {
     tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><div class="ico">📂</div><p>Aucune NDF enregistrée</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = expenses.map(e => {
+  const filtered = currentMois ? expenses.filter(e => e.mois === currentMois) : expenses;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><div class="ico">📂</div><p>Aucune NDF${currentMois ? ' pour ce mois' : ''}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(e => {
     const label  = esc(e.description || '');
     const sub    = [e.client, e.projet].filter(Boolean).map(esc).join(' · ');
     const tva10  = e.tva_10  || 0;
     const tva20  = e.tva_20  || 0;
     const tva26  = e.tva_2_6 || 0;
     const tva55  = e.tva_5_5 || 0;
+    const montant = e.transport || e.repas || 0;
     return `<tr>
       <td class="id-cell">${e.id}</td>
       <td class="label-cell">
@@ -435,8 +496,8 @@ function renderTable() {
         ${sub   ? `<div class="sub">${sub}</div>` : (!label ? '<span style="color:#ccc">—</span>' : '')}
       </td>
       <td><span style="font-size:11px;color:#666">${esc(e.categorie||'')}</span></td>
-      <td class="r amount">${e.transport ? money(e.transport) : '<span class="tva-empty">—</span>'}</td>
-      <td class="r amount">${e.repas     ? money(e.repas)     : '<span class="tva-empty">—</span>'}</td>
+      <td><span style="font-size:11px;color:#888;font-variant-numeric:tabular-nums">${esc(e.mois||'—')}</span></td>
+      <td class="r amount">${montant ? money(montant) : '<span class="tva-empty">—</span>'}</td>
       <td style="color:#aaa;font-size:11px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.commentaire)||'—'}</td>
       <td class="r amount">${money(e.totalTTC)}</td>
       <td class="r" style="color:#666">${money(e.totalHT)}</td>
@@ -472,6 +533,7 @@ function openModal(exp = null) {
   document.getElementById('fRepas').value     = '0';
   document.getElementById('fMontant').value   = '';
   document.getElementById('fCategorie').value = '';
+  document.getElementById('fMois').value      = currentMois || currentMonthDefault();
   document.getElementById('montantField').style.display = 'none';
   document.getElementById('montantHint').style.display  = '';
   stopCam();
@@ -482,6 +544,7 @@ function openModal(exp = null) {
     document.getElementById('fDesc').value       = exp.description;
     document.getElementById('fClient').value     = exp.client;
     document.getElementById('fProjet').value     = exp.projet;
+    document.getElementById('fMois').value      = exp.mois || currentMonthDefault();
     document.getElementById('fCategorie').value = exp.categorie || '';
     const savedAmt = exp.transport || exp.repas || 0;
     document.getElementById('fMontant').value   = savedAmt || '';
@@ -525,6 +588,7 @@ async function saveExpense() {
   fd.append('description', document.getElementById('fDesc').value);
   fd.append('client',      document.getElementById('fClient').value);
   fd.append('projet',      document.getElementById('fProjet').value);
+  fd.append('mois',        document.getElementById('fMois').value);
   fd.append('categorie',   document.getElementById('fCategorie').value);
   const cat   = document.getElementById('fCategorie').value;
   const mont  = document.getElementById('fMontant').value || '0';

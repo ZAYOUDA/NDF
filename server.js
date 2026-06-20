@@ -73,6 +73,7 @@ function mapRow(row) {
     description: row.description || '',
     client:      row.client      || '',
     projet:      row.projet      || '',
+    mois:        row.mois        || '',
     categorie:   row.categorie   || '',
     transport:   parseFloat(row.transport)  || 0,
     repas:       parseFloat(row.repas)      || 0,
@@ -101,7 +102,7 @@ app.get('/api/expenses', async (req, res) => {
 
 // ── API : ajout ───────────────────────────────────────────
 app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
-  const { description, client, projet, categorie, transport, repas, commentaire, vatLines } = req.body;
+  const { description, client, projet, mois, categorie, transport, repas, commentaire, vatLines } = req.body;
   const parsedVat = JSON.parse(vatLines || '[]');
   const totals    = computeTotals(parsedVat);
   const images    = await uploadImages(req.files || []);
@@ -110,6 +111,7 @@ app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
     description:  description  || '',
     client:       client       || '',
     projet:       projet       || '',
+    mois:         mois         || '',
     categorie:    categorie    || '',
     transport:    parseFloat(transport) || 0,
     repas:        parseFloat(repas)     || 0,
@@ -131,7 +133,7 @@ app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
 // ── API : modification ────────────────────────────────────
 app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { description, client, projet, categorie, transport, repas, commentaire, vatLines, removeImages } = req.body;
+  const { description, client, projet, mois, categorie, transport, repas, commentaire, vatLines, removeImages } = req.body;
 
   const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
   if (!existing) return res.status(404).json({ error: 'Non trouvé' });
@@ -150,6 +152,7 @@ app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
     description:  description  || '',
     client:       client       || '',
     projet:       projet       || '',
+    mois:         mois         || '',
     categorie:    categorie    || '',
     transport:    parseFloat(transport) || 0,
     repas:        parseFloat(repas)     || 0,
@@ -179,7 +182,9 @@ app.delete('/api/expenses/:id', async (req, res) => {
 
 // ── Export Excel ──────────────────────────────────────────
 app.get('/api/export/excel', async (req, res) => {
-  const { data: rows } = await supabase.from('expenses').select('*').order('id');
+  let q = supabase.from('expenses').select('*').order('id');
+  if (req.query.mois) q = q.eq('mois', req.query.mois);
+  const { data: rows } = await q;
   const expenses = (rows || []).map(mapRow);
 
   const wb = new ExcelJS.Workbook();
@@ -271,7 +276,9 @@ function fetchImageBuffer(url, redirects = 5) {
 }
 
 app.get('/api/export/pdf', async (req, res) => {
-  const { data: rows } = await supabase.from('expenses').select('*').order('id');
+  let q = supabase.from('expenses').select('*').order('id');
+  if (req.query.mois) q = q.eq('mois', req.query.mois);
+  const { data: rows } = await q;
   const expenses = (rows || []).map(mapRow);
 
   res.setHeader('Content-Type', 'application/pdf');
@@ -291,41 +298,46 @@ app.get('/api/export/pdf', async (req, res) => {
   doc.fillColor('#0a0a0a').fontSize(13).font('Helvetica-Bold').text('Récapitulatif', 40, y);
   y += 22;
 
-  const cols = { id:40, desc:65, transport:220, repas:285, ttc:345, ht:400, tva:455 };
-  doc.rect(35, y-3, W-70, 18).fill('#1a1a18');
-  doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
-  doc.text('ID', cols.id, y, {width:22});
-  doc.text('Desc / Client / Projet', cols.desc, y, {width:152});
-  doc.text('Transport', cols.transport, y, {width:60, align:'right'});
-  doc.text('Repas', cols.repas, y, {width:55, align:'right'});
-  doc.text('TTC', cols.ttc, y, {width:50, align:'right'});
-  doc.text('HT', cols.ht, y, {width:50, align:'right'});
-  doc.text('TVA', cols.tva, y, {width:50, align:'right'});
+  // colonnes: x + largeur fixe
+  const C = { id:{x:35,w:25}, desc:{x:63,w:140}, cat:{x:206,w:60}, mois:{x:269,w:45}, montant:{x:317,w:55}, ttc:{x:375,w:50}, ht:{x:428,w:50}, tva:{x:481,w:50} };
+  const ROW_H = 16;
+  doc.rect(35, y-2, W-70, ROW_H).fill('#1a1a18');
+  doc.fillColor('white').fontSize(7.5).font('Helvetica-Bold');
+  doc.text('ID',        C.id.x,      y, {width:C.id.w});
+  doc.text('Description',C.desc.x,   y, {width:C.desc.w});
+  doc.text('Catégorie', C.cat.x,     y, {width:C.cat.w});
+  doc.text('Mois',      C.mois.x,    y, {width:C.mois.w});
+  doc.text('Montant',   C.montant.x, y, {width:C.montant.w, align:'right'});
+  doc.text('TTC',       C.ttc.x,     y, {width:C.ttc.w,     align:'right'});
+  doc.text('HT',        C.ht.x,      y, {width:C.ht.w,      align:'right'});
+  doc.text('TVA',       C.tva.x,     y, {width:C.tva.w,     align:'right'});
 
   let sumTTC=0, sumHT=0;
   expenses.forEach((e,i) => {
-    y += 18;
+    y += ROW_H;
     if (y > doc.page.height-60) { doc.addPage(); y=40; }
-    if (i%2===0) doc.rect(35, y-3, W-70, 16).fill('#f4f4f4');
-    doc.fillColor('#0a0a0a').fontSize(7.5).font('Helvetica');
-    const label = [e.description, e.client, e.projet].filter(Boolean).join(' / ');
-    doc.text(String(e.id), cols.id, y, {width:22});
-    doc.text(label||'—', cols.desc, y, {width:152});
-    doc.text(e.transport?e.transport.toFixed(2):'—', cols.transport, y, {width:60, align:'right'});
-    doc.text(e.repas?e.repas.toFixed(2):'—', cols.repas, y, {width:55, align:'right'});
-    doc.text(e.totalTTC.toFixed(2), cols.ttc, y, {width:50, align:'right'});
-    doc.text(e.totalHT.toFixed(2), cols.ht, y, {width:50, align:'right'});
-    const tva = e.tva_10+e.tva_20+e.tva_2_6+e.tva_5_5;
-    doc.text(tva.toFixed(2), cols.tva, y, {width:50, align:'right'});
+    if (i%2===0) doc.rect(35, y-2, W-70, ROW_H).fill('#f4f4f4');
+    doc.fillColor('#0a0a0a').fontSize(7).font('Helvetica');
+    const label   = [e.description, e.client].filter(Boolean).join(' / ');
+    const montant = (e.transport || e.repas || 0).toFixed(2);
+    const tva     = (e.tva_10+e.tva_20+e.tva_2_6+e.tva_5_5).toFixed(2);
+    doc.text(String(e.id),          C.id.x,      y, {width:C.id.w,      lineBreak:false});
+    doc.text(label||'—',            C.desc.x,    y, {width:C.desc.w,    lineBreak:false});
+    doc.text(e.categorie||'—',      C.cat.x,     y, {width:C.cat.w,     lineBreak:false});
+    doc.text(e.mois||'—',           C.mois.x,    y, {width:C.mois.w,    lineBreak:false});
+    doc.text(montant+' €',          C.montant.x, y, {width:C.montant.w, align:'right', lineBreak:false});
+    doc.text(e.totalTTC.toFixed(2)+' €', C.ttc.x, y, {width:C.ttc.w,   align:'right', lineBreak:false});
+    doc.text(e.totalHT.toFixed(2)+' €',  C.ht.x,  y, {width:C.ht.w,    align:'right', lineBreak:false});
+    doc.text(tva+' €',              C.tva.x,     y, {width:C.tva.w,     align:'right', lineBreak:false});
     sumTTC+=e.totalTTC; sumHT+=e.totalHT;
   });
 
-  y+=20;
-  doc.rect(35, y-3, W-70, 18).fill('#e8e8e4');
-  doc.fillColor('#0a0a0a').fontSize(8.5).font('Helvetica-Bold');
-  doc.text('TOTAL', cols.id, y, {width:180});
-  doc.text(sumTTC.toFixed(2)+' €', cols.ttc, y, {width:50, align:'right'});
-  doc.text(sumHT.toFixed(2)+' €', cols.ht, y, {width:50, align:'right'});
+  y += ROW_H + 4;
+  doc.rect(35, y-2, W-70, ROW_H).fill('#e8e8e4');
+  doc.fillColor('#0a0a0a').fontSize(8).font('Helvetica-Bold');
+  doc.text('TOTAL',                   C.id.x,  y, {width:200, lineBreak:false});
+  doc.text(sumTTC.toFixed(2)+' €',    C.ttc.x, y, {width:C.ttc.w, align:'right', lineBreak:false});
+  doc.text(sumHT.toFixed(2)+' €',     C.ht.x,  y, {width:C.ht.w,  align:'right', lineBreak:false});
 
   for (const e of expenses) {
     if (!e.images.length) continue;
