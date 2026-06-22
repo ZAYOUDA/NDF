@@ -1,73 +1,70 @@
 require('dotenv').config();
-const express = require('express');
-const multer  = require('multer');
-const ExcelJS = require('exceljs');
+const express    = require('express');
+const multer     = require('multer');
+const ExcelJS    = require('exceljs');
 const PDFDocument = require('pdfkit');
-const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
-const https = require('https');
+const path       = require('path');
+const fs         = require('fs');
+const https      = require('https');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const USE_SUPABASE = !!process.env.SUPABASE_URL;
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+console.log(`Mode : ${USE_SUPABASE ? '🟢 PROD (Supabase)' : '🟡 DEV (local JSON)'}`);
 
-const BUCKET = 'receipts';
+// ── Multer ────────────────────────────────────────────────
+const imgFilter = (req, file, cb) =>
+  file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Images uniquement'));
 
-// multer — mémoire uniquement (pas de disque)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Seules les images sont acceptées'));
-  },
-});
+let upload;
+if (USE_SUPABASE) {
+  upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20*1024*1024 }, fileFilter: imgFilter });
+} else {
+  const UPLOAD_DIR = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+  upload = multer({
+    storage: multer.diskStorage({
+      destination: UPLOAD_DIR,
+      filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname)||'.jpg'}`),
+    }),
+    limits: { fileSize: 20*1024*1024 },
+    fileFilter: imgFilter,
+  });
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+if (!USE_SUPABASE) app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ── Helpers ──────────────────────────────────────────────
+// ── Supabase (PROD) ───────────────────────────────────────
+let supabase;
+const BUCKET = 'receipts';
+if (USE_SUPABASE) {
+  const { createClient } = require('@supabase/supabase-js');
+  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+}
+
+// ── Local DB (DEV) ────────────────────────────────────────
+const DATA_FILE = path.join(__dirname, 'data.json');
+function readDB()    { try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch { return { nextId: 1, expenses: [] }; } }
+function writeDB(db) { fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2)); }
+
+// ── Helpers communs ───────────────────────────────────────
 function computeTotals(vatLines, transport, repas) {
   const r = { tva_2_6: 0, tva_5_5: 0, tva_10: 0, tva_20: 0, total_ht: 0, total_ttc: 0 };
-  // total_ttc = montant saisi par l'utilisateur (pas la somme des lignes TVA)
-  r.total_ttc = (parseFloat(transport) || 0) + (parseFloat(repas) || 0);
-  (vatLines || []).forEach(line => {
-    const ttc  = parseFloat(line.ttc)  || 0;
-    const rate = parseFloat(line.rate) || 0;
-    const ht   = ttc / (1 + rate / 100);
-    r.total_ht  += ht;
-    if (rate === 2.6)  r.tva_2_6 += ttc - ht;
-    if (rate === 5.5)  r.tva_5_5 += ttc - ht;
-    if (rate === 10)   r.tva_10  += ttc - ht;
-    if (rate === 20)   r.tva_20  += ttc - ht;
+  r.total_ttc = (parseFloat(transport)||0) + (parseFloat(repas)||0);
+  (vatLines||[]).forEach(line => {
+    const ttc = parseFloat(line.ttc)||0, rate = parseFloat(line.rate)||0;
+    const ht  = ttc / (1 + rate/100);
+    r.total_ht += ht;
+    if (rate === 2.6) r.tva_2_6 += ttc-ht;
+    if (rate === 5.5) r.tva_5_5 += ttc-ht;
+    if (rate === 10)  r.tva_10  += ttc-ht;
+    if (rate === 20)  r.tva_20  += ttc-ht;
   });
-  // si pas de lignes TVA, HT = TTC (pas de TVA)
-  if (!vatLines || !vatLines.length) r.total_ht = r.total_ttc;
+  if (!vatLines||!vatLines.length) r.total_ht = r.total_ttc;
   return r;
-}
-
-async function uploadImages(files) {
-  const urls = [];
-  for (const file of files) {
-    const ext      = path.extname(file.originalname) || '.jpg';
-    const filename = `${crypto.randomUUID()}${ext}`;
-    const { error } = await supabase.storage
-      .from(BUCKET)
-      .upload(filename, file.buffer, { contentType: file.mimetype, upsert: false });
-    if (error) throw error;
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename);
-    urls.push(data.publicUrl);
-  }
-  return urls;
-}
-
-async function deleteImages(urls) {
-  const paths = urls.map(u => u.split(`${BUCKET}/`)[1]).filter(Boolean);
-  if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
 }
 
 function mapRow(row) {
@@ -89,108 +86,153 @@ function mapRow(row) {
     tva_10:      parseFloat(row.tva_10)    || 0,
     tva_20:      parseFloat(row.tva_20)    || 0,
     images:      row.images      || [],
-    createdAt:   row.created_at,
+    createdAt:   row.created_at  || row.createdAt,
   };
+}
+
+async function uploadImages(files) {
+  if (USE_SUPABASE) {
+    const urls = [];
+    for (const file of files) {
+      const ext = path.extname(file.originalname)||'.jpg';
+      const filename = `${crypto.randomUUID()}${ext}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(filename, file.buffer, { contentType: file.mimetype, upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  } else {
+    return (files||[]).map(f => `/uploads/${f.filename}`);
+  }
+}
+
+async function deleteImages(urls) {
+  if (USE_SUPABASE) {
+    const paths = urls.map(u => u.split(`${BUCKET}/`)[1]).filter(Boolean);
+    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+  } else {
+    urls.forEach(url => { try { fs.unlinkSync(path.join(__dirname, url)); } catch {} });
+  }
 }
 
 // ── API : liste ───────────────────────────────────────────
 app.get('/api/expenses', async (req, res) => {
-  const { data, error } = await supabase
-    .from('expenses')
-    .select('*')
-    .order('id', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data.map(mapRow));
+  if (USE_SUPABASE) {
+    const { data, error } = await supabase.from('expenses').select('*').order('id', { ascending: true });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data.map(mapRow));
+  }
+  const db = readDB();
+  res.json(db.expenses.map(mapRow));
 });
 
 // ── API : ajout ───────────────────────────────────────────
 app.post('/api/expenses', upload.array('images', 20), async (req, res) => {
   const { description, client, projet, mois, categorie, transport, repas, commentaire, vatLines } = req.body;
-  const parsedVat = JSON.parse(vatLines || '[]');
+  const parsedVat = JSON.parse(vatLines||'[]');
   const totals    = computeTotals(parsedVat, transport, repas);
-  const images    = await uploadImages(req.files || []);
+  const images    = await uploadImages(req.files||[]);
 
-  const { data, error } = await supabase.from('expenses').insert([{
-    description:  description  || '',
-    client:       client       || '',
-    projet:       projet       || '',
-    mois:         mois         || '',
-    categorie:    categorie    || '',
-    transport:    parseFloat(transport) || 0,
-    repas:        parseFloat(repas)     || 0,
-    commentaire:  commentaire  || '',
-    vat_lines:    parsedVat,
-    total_ttc:    totals.total_ttc,
-    total_ht:     totals.total_ht,
-    tva_2_6:      totals.tva_2_6,
-    tva_5_5:      totals.tva_5_5,
-    tva_10:       totals.tva_10,
-    tva_20:       totals.tva_20,
-    images,
-  }]).select().single();
+  if (USE_SUPABASE) {
+    const { data, error } = await supabase.from('expenses').insert([{
+      description: description||'', client: client||'', projet: projet||'',
+      mois: mois||'', categorie: categorie||'',
+      transport: parseFloat(transport)||0, repas: parseFloat(repas)||0,
+      commentaire: commentaire||'', vat_lines: parsedVat, images,
+      total_ttc: totals.total_ttc, total_ht: totals.total_ht,
+      tva_2_6: totals.tva_2_6, tva_5_5: totals.tva_5_5, tva_10: totals.tva_10, tva_20: totals.tva_20,
+    }]).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(mapRow(data));
+  }
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(mapRow(data));
+  const db = readDB();
+  const row = {
+    id: db.nextId++,
+    description: description||'', client: client||'', projet: projet||'',
+    mois: mois||'', categorie: categorie||'',
+    transport: parseFloat(transport)||0, repas: parseFloat(repas)||0,
+    commentaire: commentaire||'', vat_lines: parsedVat, images,
+    total_ttc: totals.total_ttc, total_ht: totals.total_ht,
+    tva_2_6: totals.tva_2_6, tva_5_5: totals.tva_5_5, tva_10: totals.tva_10, tva_20: totals.tva_20,
+    created_at: new Date().toISOString(),
+  };
+  db.expenses.push(row);
+  writeDB(db);
+  res.json(mapRow(row));
 });
 
 // ── API : modification ────────────────────────────────────
 app.put('/api/expenses/:id', upload.array('images', 20), async (req, res) => {
   const id = parseInt(req.params.id);
   const { description, client, projet, mois, categorie, transport, repas, commentaire, vatLines, removeImages } = req.body;
-
-
-  const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
-  if (!existing) return res.status(404).json({ error: 'Non trouvé' });
-
-  const toRemove = removeImages ? JSON.parse(removeImages) : [];
-  await deleteImages(toRemove);
-
-  const keptImages = (existing.images || []).filter(u => !toRemove.includes(u));
-  const newImages  = await uploadImages(req.files || []);
-  const images     = [...keptImages, ...newImages];
-
-  const parsedVat = JSON.parse(vatLines || '[]');
+  const toRemove  = removeImages ? JSON.parse(removeImages) : [];
+  const parsedVat = JSON.parse(vatLines||'[]');
   const totals    = computeTotals(parsedVat, transport, repas);
 
-  const { data, error } = await supabase.from('expenses').update({
-    description:  description  || '',
-    client:       client       || '',
-    projet:       projet       || '',
-    mois:         mois         || '',
-    categorie:    categorie    || '',
-    transport:    parseFloat(transport) || 0,
-    repas:        parseFloat(repas)     || 0,
-    commentaire:  commentaire  || '',
-    vat_lines:    parsedVat,
-    total_ttc:    totals.total_ttc,
-    total_ht:     totals.total_ht,
-    tva_2_6:      totals.tva_2_6,
-    tva_5_5:      totals.tva_5_5,
-    tva_10:       totals.tva_10,
-    tva_20:       totals.tva_20,
-    images,
-  }).eq('id', id).select().single();
+  if (USE_SUPABASE) {
+    const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
+    if (!existing) return res.status(404).json({ error: 'Non trouvé' });
+    await deleteImages(toRemove);
+    const images = [...(existing.images||[]).filter(u => !toRemove.includes(u)), ...await uploadImages(req.files||[])];
+    const { data, error } = await supabase.from('expenses').update({
+      description: description||'', client: client||'', projet: projet||'',
+      mois: mois||'', categorie: categorie||'',
+      transport: parseFloat(transport)||0, repas: parseFloat(repas)||0,
+      commentaire: commentaire||'', vat_lines: parsedVat, images,
+      total_ttc: totals.total_ttc, total_ht: totals.total_ht,
+      tva_2_6: totals.tva_2_6, tva_5_5: totals.tva_5_5, tva_10: totals.tva_10, tva_20: totals.tva_20,
+    }).eq('id', id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(mapRow(data));
+  }
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(mapRow(data));
+  const db = readDB();
+  const idx = db.expenses.findIndex(e => e.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Non trouvé' });
+  await deleteImages(toRemove);
+  const images = [...(db.expenses[idx].images||[]).filter(u => !toRemove.includes(u)), ...await uploadImages(req.files||[])];
+  db.expenses[idx] = { ...db.expenses[idx], description: description||'', client: client||'', projet: projet||'', mois: mois||'', categorie: categorie||'', transport: parseFloat(transport)||0, repas: parseFloat(repas)||0, commentaire: commentaire||'', vat_lines: parsedVat, images, total_ttc: totals.total_ttc, total_ht: totals.total_ht, tva_2_6: totals.tva_2_6, tva_5_5: totals.tva_5_5, tva_10: totals.tva_10, tva_20: totals.tva_20 };
+  writeDB(db);
+  res.json(mapRow(db.expenses[idx]));
 });
 
 // ── API : suppression ─────────────────────────────────────
 app.delete('/api/expenses/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-  const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
-  if (existing?.images?.length) await deleteImages(existing.images);
-  await supabase.from('expenses').delete().eq('id', id);
+  if (USE_SUPABASE) {
+    const { data: existing } = await supabase.from('expenses').select('images').eq('id', id).single();
+    if (existing?.images?.length) await deleteImages(existing.images);
+    await supabase.from('expenses').delete().eq('id', id);
+    return res.json({ ok: true });
+  }
+  const db = readDB();
+  const row = db.expenses.find(e => e.id === id);
+  if (row?.images?.length) await deleteImages(row.images);
+  db.expenses = db.expenses.filter(e => e.id !== id);
+  writeDB(db);
   res.json({ ok: true });
 });
 
+// ── Requête expenses filtrée ──────────────────────────────
+async function getExpenses(moisFilter) {
+  if (USE_SUPABASE) {
+    let q = supabase.from('expenses').select('*').order('mois').order('id');
+    if (moisFilter.length) q = q.or(moisFilter.map(m => `mois.like.${m}%`).join(','));
+    const { data } = await q;
+    return (data||[]).map(mapRow);
+  }
+  const db = readDB();
+  let rows = db.expenses.map(mapRow);
+  if (moisFilter.length) rows = rows.filter(e => moisFilter.some(m => (e.mois||'').startsWith(m)));
+  return rows.sort((a,b) => (a.mois||'').localeCompare(b.mois||'')||a.id-b.id);
+}
+
 // ── Export Excel ──────────────────────────────────────────
 app.get('/api/export/excel', async (req, res) => {
-  let q = supabase.from('expenses').select('*').order('mois').order('id');
-  const moisFilter = [].concat(req.query['mois[]'] || req.query.mois || []).filter(Boolean);
-  if (moisFilter.length) q = q.or(moisFilter.map(m => `mois.like.${m}%`).join(','));
-  const { data: rows } = await q;
-  const expenses = (rows || []).map(mapRow);
+  const moisFilter = [].concat(req.query['mois[]']||req.query.mois||[]).filter(Boolean);
+  const expenses   = await getExpenses(moisFilter);
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'NDF App';
@@ -200,63 +242,49 @@ app.get('/api/export/excel', async (req, res) => {
   const border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
 
   ws.columns = [
-    { header: 'ID',                  key: 'id',          width: 6  },
-    { header: 'Description',         key: 'description', width: 22 },
-    { header: 'Client',              key: 'client',      width: 18 },
-    { header: 'Projet',              key: 'projet',      width: 18 },
-    { header: 'Transport (TTC)',      key: 'transport',   width: 16 },
-    { header: 'Repas (TTC)',          key: 'repas',       width: 14 },
-    { header: 'Commentaire',         key: 'commentaire', width: 24 },
-    { header: 'TOTAL TTC',           key: 'totalTTC',    width: 14 },
-    { header: 'TOTAL HT',            key: 'totalHT',     width: 14 },
-    { header: 'TVA 10% (Montant)',    key: 'tva_10',      width: 16 },
-    { header: 'TVA 20% (Montant)',    key: 'tva_20',      width: 16 },
-    { header: 'TVA 2,6% (Montant)',   key: 'tva_2_6',     width: 16 },
-    { header: 'TVA 5,5% (Montant)',   key: 'tva_5_5',     width: 16 },
-    { header: 'Justificatifs',       key: 'imageCount',  width: 14 },
+    { header: 'ID',                 key: 'id',          width: 6  },
+    { header: 'Description',        key: 'description', width: 22 },
+    { header: 'Client',             key: 'client',      width: 18 },
+    { header: 'Projet',             key: 'projet',      width: 18 },
+    { header: 'Catégorie',          key: 'categorie',   width: 14 },
+    { header: 'Date',               key: 'mois',        width: 12 },
+    { header: 'Transport (TTC)',     key: 'transport',   width: 16 },
+    { header: 'Repas (TTC)',         key: 'repas',       width: 14 },
+    { header: 'Commentaire',        key: 'commentaire', width: 24 },
+    { header: 'TOTAL TTC',          key: 'totalTTC',    width: 14 },
+    { header: 'TOTAL HT',           key: 'totalHT',     width: 14 },
+    { header: 'TVA 10% (Montant)',   key: 'tva_10',      width: 16 },
+    { header: 'TVA 20% (Montant)',   key: 'tva_20',      width: 16 },
+    { header: 'TVA 2,6% (Montant)',  key: 'tva_2_6',     width: 16 },
+    { header: 'TVA 5,5% (Montant)',  key: 'tva_5_5',     width: 16 },
+    { header: 'Justificatifs',      key: 'imageCount',  width: 14 },
   ];
 
-  const headerRow = ws.getRow(1);
-  headerRow.eachCell(cell => {
-    cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
-    cell.font   = { bold: true, color: { argb: WHITE }, size: 10 };
-    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  ws.getRow(1).eachCell(cell => {
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:BLUE} };
+    cell.font = { bold:true, color:{argb:WHITE}, size:10 };
+    cell.alignment = { horizontal:'center', vertical:'middle', wrapText:true };
     cell.border = border;
   });
-  headerRow.height = 28;
-  ws.views = [{ state: 'frozen', ySplit: 1 }];
+  ws.getRow(1).height = 28;
+  ws.views = [{ state:'frozen', ySplit:1 }];
 
   const money = '#,##0.00 €';
   let sumT=0,sumR=0,sumTTC=0,sumHT=0,s10=0,s20=0,s26=0,s55=0;
 
-  expenses.forEach((e, i) => {
+  expenses.forEach((e,i) => {
     sumT+=e.transport; sumR+=e.repas; sumTTC+=e.totalTTC; sumHT+=e.totalHT;
     s10+=e.tva_10; s20+=e.tva_20; s26+=e.tva_2_6; s55+=e.tva_5_5;
-
-    const row = ws.addRow({
-      id: e.id, description: e.description, client: e.client, projet: e.projet,
-      transport: e.transport, repas: e.repas, commentaire: e.commentaire,
-      totalTTC: e.totalTTC, totalHT: e.totalHT,
-      tva_10: e.tva_10||'', tva_20: e.tva_20||'', tva_2_6: e.tva_2_6||'', tva_5_5: e.tva_5_5||'',
-      imageCount: e.images.length,
-    });
-
-    if (i % 2 === 1) row.eachCell(cell => { cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:BL2} }; });
-    ['transport','repas','totalTTC','totalHT','tva_10','tva_20','tva_2_6','tva_5_5'].forEach(k => {
-      const c = row.getCell(k);
-      if (typeof e[k] === 'number' && e[k] !== 0) c.numFmt = money;
-    });
-    row.getCell('imageCount').alignment = { horizontal: 'center' };
+    const row = ws.addRow({ id:e.id, description:e.description, client:e.client, projet:e.projet, categorie:e.categorie, mois:e.mois, transport:e.transport, repas:e.repas, commentaire:e.commentaire, totalTTC:e.totalTTC, totalHT:e.totalHT, tva_10:e.tva_10||'', tva_20:e.tva_20||'', tva_2_6:e.tva_2_6||'', tva_5_5:e.tva_5_5||'', imageCount:e.images.length });
+    if (i%2===1) row.eachCell(cell => { cell.fill = {type:'pattern',pattern:'solid',fgColor:{argb:BL2}}; });
+    ['transport','repas','totalTTC','totalHT','tva_10','tva_20','tva_2_6','tva_5_5'].forEach(k => { const c=row.getCell(k); if(typeof e[k]==='number'&&e[k]!==0) c.numFmt=money; });
+    row.getCell('imageCount').alignment = { horizontal:'center' };
     row.eachCell(cell => { cell.border = border; });
   });
 
   const tr = ws.addRow({ id:'TOTAL', transport:sumT, repas:sumR, totalTTC:sumTTC, totalHT:sumHT, tva_10:s10, tva_20:s20, tva_2_6:s26, tva_5_5:s55 });
-  tr.eachCell(cell => {
-    cell.font = { bold:true, color:{argb:DARK} };
-    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFe8e8e4'} };
-    cell.border = border;
-  });
-  ['transport','repas','totalTTC','totalHT','tva_10','tva_20','tva_2_6','tva_5_5'].forEach(k => tr.getCell(k).numFmt = money);
+  tr.eachCell(cell => { cell.font={bold:true,color:{argb:DARK}}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFe8e8e4'}}; cell.border=border; });
+  ['transport','repas','totalTTC','totalHT','tva_10','tva_20','tva_2_6','tva_5_5'].forEach(k => tr.getCell(k).numFmt=money);
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="NDF_${new Date().toISOString().slice(0,10)}.xlsx"`);
@@ -265,34 +293,33 @@ app.get('/api/export/excel', async (req, res) => {
 });
 
 // ── Export PDF ────────────────────────────────────────────
-function fetchImageBuffer(url, redirects = 5) {
+function fetchImageBuffer(url, redirects=5) {
   return new Promise((resolve, reject) => {
-    if (redirects === 0) return reject(new Error('Too many redirects'));
-    https.get(url, res => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return resolve(fetchImageBuffer(res.headers.location, redirects - 1));
-      }
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-      res.on('error', reject);
-    }).on('error', reject);
+    if (redirects===0) return reject(new Error('Too many redirects'));
+    https.get(url, r => {
+      if (r.statusCode>=300&&r.statusCode<400&&r.headers.location) return resolve(fetchImageBuffer(r.headers.location, redirects-1));
+      const chunks=[];
+      r.on('data',c=>chunks.push(c));
+      r.on('end',()=>resolve(Buffer.concat(chunks)));
+      r.on('error',reject);
+    }).on('error',reject);
   });
 }
 
+async function readImageBuffer(urlOrPath) {
+  if (urlOrPath.startsWith('http')) return fetchImageBuffer(urlOrPath);
+  return fs.readFileSync(path.join(__dirname, urlOrPath));
+}
+
 app.get('/api/export/pdf', async (req, res) => {
-  let q = supabase.from('expenses').select('*').order('mois').order('id');
-  const moisFilter = [].concat(req.query['mois[]'] || req.query.mois || []).filter(Boolean);
-  if (moisFilter.length) q = q.or(moisFilter.map(m => `mois.like.${m}%`).join(','));
-  const { data: rows } = await q;
-  const expenses = (rows || []).map(mapRow);
+  const moisFilter = [].concat(req.query['mois[]']||req.query.mois||[]).filter(Boolean);
+  const expenses   = await getExpenses(moisFilter);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="NDF_Factures_${new Date().toISOString().slice(0,10)}.pdf"`);
 
   const doc = new PDFDocument({ size:'A4', margin:40, info:{ Title:'Notes de Frais — Justificatifs' } });
   doc.pipe(res);
-
   const W = doc.page.width;
 
   doc.rect(0,0,W,110).fill('#1a1a18');
@@ -304,46 +331,45 @@ app.get('/api/export/pdf', async (req, res) => {
   doc.fillColor('#0a0a0a').fontSize(13).font('Helvetica-Bold').text('Récapitulatif', 40, y);
   y += 22;
 
-  // colonnes: x + largeur fixe
   const C = { id:{x:35,w:25}, desc:{x:63,w:140}, cat:{x:206,w:60}, mois:{x:269,w:45}, montant:{x:317,w:55}, ttc:{x:375,w:50}, ht:{x:428,w:50}, tva:{x:481,w:50} };
   const ROW_H = 16;
-  doc.rect(35, y-2, W-70, ROW_H).fill('#1a1a18');
+  doc.rect(35,y-2,W-70,ROW_H).fill('#1a1a18');
   doc.fillColor('white').fontSize(7.5).font('Helvetica-Bold');
   doc.text('ID',        C.id.x,      y, {width:C.id.w});
-  doc.text('Description',C.desc.x,   y, {width:C.desc.w});
-  doc.text('Catégorie', C.cat.x,     y, {width:C.cat.w});
-  doc.text('Mois',      C.mois.x,    y, {width:C.mois.w});
-  doc.text('Montant',   C.montant.x, y, {width:C.montant.w, align:'right'});
-  doc.text('TTC',       C.ttc.x,     y, {width:C.ttc.w,     align:'right'});
-  doc.text('HT',        C.ht.x,      y, {width:C.ht.w,      align:'right'});
-  doc.text('TVA',       C.tva.x,     y, {width:C.tva.w,     align:'right'});
+  doc.text('Description',C.desc.x,  y, {width:C.desc.w});
+  doc.text('Catégorie', C.cat.x,    y, {width:C.cat.w});
+  doc.text('Date',      C.mois.x,   y, {width:C.mois.w});
+  doc.text('Montant',   C.montant.x,y, {width:C.montant.w, align:'right'});
+  doc.text('TTC',       C.ttc.x,    y, {width:C.ttc.w,     align:'right'});
+  doc.text('HT',        C.ht.x,     y, {width:C.ht.w,      align:'right'});
+  doc.text('TVA',       C.tva.x,    y, {width:C.tva.w,     align:'right'});
 
   let sumTTC=0, sumHT=0;
   expenses.forEach((e,i) => {
     y += ROW_H;
-    if (y > doc.page.height-60) { doc.addPage(); y=40; }
-    if (i%2===0) doc.rect(35, y-2, W-70, ROW_H).fill('#f4f4f4');
+    if (y>doc.page.height-60) { doc.addPage(); y=40; }
+    if (i%2===0) doc.rect(35,y-2,W-70,ROW_H).fill('#f4f4f4');
     doc.fillColor('#0a0a0a').fontSize(7).font('Helvetica');
-    const label   = [e.description, e.client].filter(Boolean).join(' / ');
-    const montant = (e.transport || e.repas || 0).toFixed(2);
+    const label   = [e.description,e.client].filter(Boolean).join(' / ');
+    const montant = (e.transport||e.repas||0).toFixed(2);
     const tva     = (e.tva_10+e.tva_20+e.tva_2_6+e.tva_5_5).toFixed(2);
-    doc.text(String(e.id),          C.id.x,      y, {width:C.id.w,      lineBreak:false});
-    doc.text(label||'—',            C.desc.x,    y, {width:C.desc.w,    lineBreak:false});
-    doc.text(e.categorie||'—',      C.cat.x,     y, {width:C.cat.w,     lineBreak:false});
-    doc.text(e.mois||'—',           C.mois.x,    y, {width:C.mois.w,    lineBreak:false});
-    doc.text(montant+' €',          C.montant.x, y, {width:C.montant.w, align:'right', lineBreak:false});
-    doc.text(e.totalTTC.toFixed(2)+' €', C.ttc.x, y, {width:C.ttc.w,   align:'right', lineBreak:false});
-    doc.text(e.totalHT.toFixed(2)+' €',  C.ht.x,  y, {width:C.ht.w,    align:'right', lineBreak:false});
-    doc.text(tva+' €',              C.tva.x,     y, {width:C.tva.w,     align:'right', lineBreak:false});
+    doc.text(String(e.id),               C.id.x,      y, {width:C.id.w,      lineBreak:false});
+    doc.text(label||'—',                 C.desc.x,    y, {width:C.desc.w,    lineBreak:false});
+    doc.text(e.categorie||'—',           C.cat.x,     y, {width:C.cat.w,     lineBreak:false});
+    doc.text(e.mois||'—',                C.mois.x,    y, {width:C.mois.w,    lineBreak:false});
+    doc.text(montant+' €',               C.montant.x, y, {width:C.montant.w, align:'right', lineBreak:false});
+    doc.text(e.totalTTC.toFixed(2)+' €', C.ttc.x,     y, {width:C.ttc.w,    align:'right', lineBreak:false});
+    doc.text(e.totalHT.toFixed(2)+' €',  C.ht.x,      y, {width:C.ht.w,     align:'right', lineBreak:false});
+    doc.text(tva+' €',                   C.tva.x,     y, {width:C.tva.w,     align:'right', lineBreak:false});
     sumTTC+=e.totalTTC; sumHT+=e.totalHT;
   });
 
-  y += ROW_H + 4;
-  doc.rect(35, y-2, W-70, ROW_H).fill('#e8e8e4');
+  y += ROW_H+4;
+  doc.rect(35,y-2,W-70,ROW_H).fill('#e8e8e4');
   doc.fillColor('#0a0a0a').fontSize(8).font('Helvetica-Bold');
-  doc.text('TOTAL',                   C.id.x,  y, {width:200, lineBreak:false});
-  doc.text(sumTTC.toFixed(2)+' €',    C.ttc.x, y, {width:C.ttc.w, align:'right', lineBreak:false});
-  doc.text(sumHT.toFixed(2)+' €',     C.ht.x,  y, {width:C.ht.w,  align:'right', lineBreak:false});
+  doc.text('TOTAL',                  C.id.x,  y, {width:200,        lineBreak:false});
+  doc.text(sumTTC.toFixed(2)+' €',   C.ttc.x, y, {width:C.ttc.w,   align:'right', lineBreak:false});
+  doc.text(sumHT.toFixed(2)+' €',    C.ht.x,  y, {width:C.ht.w,    align:'right', lineBreak:false});
 
   for (const e of expenses) {
     if (!e.images.length) continue;
@@ -351,7 +377,7 @@ app.get('/api/export/pdf', async (req, res) => {
     doc.rect(0,0,W,80).fill('#1a1a18');
     doc.fillColor('#aaa').fontSize(9).font('Helvetica').text(`NDF #${e.id}`, 40, 12, {width:W-80});
     doc.fillColor('white').fontSize(13).font('Helvetica-Bold');
-    const label = [e.description, e.client, e.projet].filter(Boolean).join(' — ') || `NDF #${e.id}`;
+    const label = [e.description,e.client,e.projet].filter(Boolean).join(' — ')||`NDF #${e.id}`;
     doc.text(label, 40, 26, {width:W-80});
     doc.fontSize(9).font('Helvetica');
     const catLabel = e.categorie ? `${e.categorie}: ${(e.transport||e.repas||0).toFixed(2)} €` : `Transport: ${e.transport.toFixed(2)} €  |  Repas: ${e.repas.toFixed(2)} €`;
@@ -361,15 +387,14 @@ app.get('/api/export/pdf', async (req, res) => {
     if(e.tva_5_5) parts.push(`TVA 5,5%: ${e.tva_5_5.toFixed(2)} €`);
     if(e.tva_10)  parts.push(`TVA 10%: ${e.tva_10.toFixed(2)} €`);
     if(e.tva_20)  parts.push(`TVA 20%: ${e.tva_20.toFixed(2)} €`);
-    doc.text(parts.join('  |  '), 40, 53, {width:W-80});
+    if(parts.length) doc.text(parts.join('  |  '), 40, 62, {width:W-80});
 
     let imgY=95;
-    const maxH = (doc.page.height-imgY-40) / Math.min(e.images.length,2);
-
+    const maxH = (doc.page.height-imgY-40)/Math.min(e.images.length,2);
     for (let i=0; i<e.images.length; i++) {
-      if (i>0 && i%2===0) { doc.addPage(); imgY=40; }
+      if (i>0&&i%2===0) { doc.addPage(); imgY=40; }
       try {
-        const buf = await fetchImageBuffer(e.images[i]);
+        const buf = await readImageBuffer(e.images[i]);
         doc.image(buf, 40, imgY, { fit:[W-80, maxH-10], align:'center' });
         imgY+=maxH;
       } catch(_) {
@@ -378,10 +403,8 @@ app.get('/api/export/pdf', async (req, res) => {
       }
     }
   }
-
   doc.end();
 });
 
 app.listen(PORT, () => console.log(`NDF App : http://localhost:${PORT}`));
-
 module.exports = app;
