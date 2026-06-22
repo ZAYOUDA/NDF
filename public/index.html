@@ -488,9 +488,6 @@ function formatMois(m) {
 
 function setMois(m) {
   currentMois = m;
-  const qs = m ? `?mois=${m}` : '';
-  document.getElementById('linkExcel').href = `/api/export/excel${qs}`;
-  document.getElementById('linkPdf').href   = `/api/export/pdf${qs}`;
   document.getElementById('tableTitle').textContent = m ? `NDF — ${formatMois(m)}` : 'Liste des NDF';
   renderMonthBar();
   renderStats();
