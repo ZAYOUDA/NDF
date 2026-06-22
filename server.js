@@ -14,8 +14,10 @@ const USE_SUPABASE = !!process.env.SUPABASE_URL;
 console.log(`Mode : ${USE_SUPABASE ? '🟢 PROD (Supabase)' : '🟡 DEV (local JSON)'}`);
 
 // ── Multer ────────────────────────────────────────────────
-const imgFilter = (req, file, cb) =>
+const imgFilter  = (req, file, cb) =>
   file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Images uniquement'));
+const xlsxFilter = (req, file, cb) =>
+  file.mimetype.includes('spreadsheet') || file.originalname.endsWith('.xlsx') ? cb(null, true) : cb(new Error('Fichier Excel uniquement'));
 
 let upload;
 if (USE_SUPABASE) {
@@ -228,6 +230,130 @@ async function getExpenses(moisFilter) {
   if (moisFilter.length) rows = rows.filter(e => moisFilter.some(m => (e.mois||'').startsWith(m)));
   return rows.sort((a,b) => (a.mois||'').localeCompare(b.mois||'')||a.id-b.id);
 }
+
+// ── Import Excel ──────────────────────────────────────────
+const uploadXlsx = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20*1024*1024 }, fileFilter: xlsxFilter });
+
+app.post('/api/import/excel', uploadXlsx.single('file'), async (req, res) => {
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(req.file.buffer);
+    const ws = wb.worksheets[0];
+
+    // 1. Détecter la ligne d'en-tête et mapper les colonnes par nom
+    let headerRowNum = null;
+    const colMap = {};
+
+    function cellText(cell) {
+      const v = cell.value;
+      if (!v) return '';
+      if (typeof v === 'string') return v;
+      if (typeof v === 'number') return String(v);
+      if (v && v.richText) return v.richText.map(r => r.text || '').join('');
+      if (v && v.result !== undefined) return String(v.result);
+      return String(v);
+    }
+
+    function cellNum(cell) {
+      const v = cell.value;
+      if (!v && v !== 0) return 0;
+      if (typeof v === 'number') return v;
+      // Cellule formule : {formula, result}
+      if (typeof v === 'object' && v.result !== undefined) return parseFloat(v.result) || 0;
+      return parseFloat(v) || 0;
+    }
+
+    ws.eachRow((row, rowNum) => {
+      if (headerRowNum) return;
+      let foundTotal = false;
+      row.eachCell((cell, colNum) => {
+        const v = cellText(cell).replace(/\s+/g,' ').trim().toLowerCase();
+        if (v === '#')                                  colMap.num        = colNum;
+        else if (v.includes('description') || v.includes('client')) colMap.desc = colNum;
+        else if (v === 'transport')                     colMap.transport  = colNum;
+        else if (v === 'repas')                         colMap.repas      = colNum;
+        else if (v === 'commentaire')                   colMap.commentaire= colNum;
+        else if (v === 'total ttc')                   { colMap.totalTTC   = colNum; foundTotal = true; }
+        else if (v === 'total ht')                     colMap.totalHT    = colNum;
+        else if (v.includes('10%'))                    colMap.tva10      = colNum;
+        else if (v.includes('20%'))                    colMap.tva20      = colNum;
+        else if (v.includes('2,6%') || v.includes('2.6%')) colMap.tva26 = colNum;
+        else if (v.includes('5,5%') || v.includes('5.5%')) colMap.tva55 = colNum;
+      });
+      if (foundTotal) headerRowNum = rowNum;
+    });
+
+    if (!headerRowNum) return res.status(400).json({ error: 'En-tête non trouvée dans le fichier.' });
+
+    // 2. Lire les lignes de données
+    const toInsert = [];
+
+    ws.eachRow((row, rowNum) => {
+      if (rowNum <= headerRowNum) return;
+      const numVal = cellNum(row.getCell(colMap.num || 2));
+      if (!numVal || isNaN(numVal)) return;
+
+      const ttc = cellNum(row.getCell(colMap.totalTTC));
+      if (ttc === 0) return;
+
+      // Date : colonne C (index 3) = Description/Client/Projet
+      let mois = '';
+      const dateCell = row.getCell(3); // toujours col C dans ce template
+      const dateVal  = dateCell.value;
+      if (dateVal instanceof Date) {
+        const y=dateVal.getFullYear(), m=String(dateVal.getMonth()+1).padStart(2,'0'), d=String(dateVal.getDate()).padStart(2,'0');
+        mois = `${y}-${m}-${d}`;
+      } else if (typeof dateVal === 'string') {
+        const parts = dateVal.trim().split('/');
+        if (parts.length === 3) mois = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      }
+
+      const transport   = colMap.transport   ? cellNum(row.getCell(colMap.transport))   : 0;
+      const repas       = colMap.repas       ? cellNum(row.getCell(colMap.repas))       : 0;
+      const commentaire = colMap.commentaire ? cellText(row.getCell(colMap.commentaire)).trim() : '';
+      const totalHT     = colMap.totalHT     ? cellNum(row.getCell(colMap.totalHT))     : 0;
+      const tva10       = colMap.tva10       ? cellNum(row.getCell(colMap.tva10))       : 0;
+      const tva20       = colMap.tva20       ? cellNum(row.getCell(colMap.tva20))       : 0;
+      const tva26       = colMap.tva26       ? cellNum(row.getCell(colMap.tva26))       : 0;
+      const tva55       = colMap.tva55       ? cellNum(row.getCell(colMap.tva55))       : 0;
+
+      // Reconstruire les vatLines depuis la ventilation
+      const vatLines = [];
+      if (tva10 && ttc) vatLines.push({ rate: 10,  ttc: transport || repas || ttc });
+      if (tva20 && ttc) vatLines.push({ rate: 20,  ttc: transport || repas || ttc });
+      if (tva26 && ttc) vatLines.push({ rate: 2.6, ttc: transport || repas || ttc });
+      if (tva55 && ttc) vatLines.push({ rate: 5.5, ttc: transport || repas || ttc });
+
+      const cat = transport > 0 ? 'Transport' : repas > 0 ? 'Repas' : '';
+
+      toInsert.push({
+        description: '', client: '', projet: '', commentaire,
+        mois, categorie: cat,
+        transport, repas,
+        vat_lines: vatLines,
+        total_ttc: ttc,
+        total_ht:  totalHT || ttc - tva10 - tva20 - tva26 - tva55,
+        tva_10: tva10, tva_20: tva20, tva_2_6: tva26, tva_5_5: tva55,
+        images: [],
+      });
+    });
+
+    if (!toInsert.length) return res.json({ imported: 0 });
+
+    if (USE_SUPABASE) {
+      const { error } = await supabase.from('expenses').insert(toInsert);
+      if (error) return res.status(500).json({ error: error.message });
+    } else {
+      const db = readDB();
+      toInsert.forEach(row => { db.expenses.push({ ...row, id: db.nextId++, created_at: new Date().toISOString() }); });
+      writeDB(db);
+    }
+
+    res.json({ imported: toInsert.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── Export Excel ──────────────────────────────────────────
 app.get('/api/export/excel', async (req, res) => {
