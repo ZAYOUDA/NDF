@@ -228,10 +228,6 @@
   <div class="header-right">
     <button class="btn-ghost" onclick="openExport('excel')">↓ Excel</button>
     <button class="btn-ghost" onclick="openExport('pdf')">↓ PDF Factures</button>
-    <label class="btn-ghost" style="cursor:pointer" title="Importer un fichier Excel NDF">
-      ↑ Import Excel
-      <input type="file" accept=".xlsx" style="display:none" onchange="importExcel(event)">
-    </label>
     <button class="btn-primary" onclick="openModal()">+ Nouvelle NDF</button>
   </div>
 </header>
@@ -759,21 +755,6 @@ function snapPhoto() {
     stopCam();
     toast('Photo capturée ✓');
   }, 'image/jpeg', 0.92);
-}
-
-// ── Import Excel ─────────────────────────────────────────
-async function importExcel(e) {
-  const file = e.target.files[0];
-  e.target.value = '';
-  if (!file) return;
-  const fd = new FormData();
-  fd.append('file', file);
-  toast('Import en cours…');
-  const res  = await fetch('/api/import/excel', { method: 'POST', body: fd });
-  const json = await res.json();
-  if (json.error) { alert('Erreur import : ' + json.error); return; }
-  toast(`✓ ${json.imported} NDF importée(s)`);
-  load();
 }
 
 // ── Export modal ─────────────────────────────────────────
