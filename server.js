@@ -184,6 +184,59 @@ app.delete('/api/expenses/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Import Excel ──────────────────────────────────────────
+app.post('/api/import/excel', upload.single('file'), async (req, res) => {
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(req.file.buffer);
+    const ws = wb.worksheets[0];
+
+    const rows = [];
+    ws.eachRow((row, rowNum) => {
+      const num = row.getCell(2).value; // colonne B = #
+      if (!num || isNaN(parseFloat(num))) return;
+
+      const dateVal  = row.getCell(3).value;  // colonne C = date
+      const transport = parseFloat(row.getCell(6).value)  || 0;
+      const repas     = parseFloat(row.getCell(7).value)  || 0;
+      const comment   = String(row.getCell(10).value || '').trim();
+      const totalTTC  = parseFloat(row.getCell(11).value) || 0;
+      if (totalTTC === 0) return;
+
+      const tva10  = parseFloat(row.getCell(13).value) || 0;
+      const tva20  = parseFloat(row.getCell(14).value) || 0;
+      const tva26  = parseFloat(row.getCell(15).value) || 0;
+      const tva55  = parseFloat(row.getCell(16).value) || 0;
+      const totalHT = totalTTC - tva10 - tva20 - tva26 - tva55;
+
+      // Reconstruire les vatLines depuis la ventilation TVA
+      const vatLines = [];
+      if (tva10)  vatLines.push({ rate: 10,  ttc: parseFloat((repas+transport > 0 ? repas+transport : totalTTC).toFixed(2)) });
+      if (tva20)  vatLines.push({ rate: 20,  ttc: parseFloat((repas+transport > 0 ? repas+transport : totalTTC).toFixed(2)) });
+      if (tva26)  vatLines.push({ rate: 2.6, ttc: parseFloat((repas+transport > 0 ? repas+transport : totalTTC).toFixed(2)) });
+      if (tva55)  vatLines.push({ rate: 5.5, ttc: parseFloat((repas+transport > 0 ? repas+transport : totalTTC).toFixed(2)) });
+
+      // Formater la date
+      let mois = '';
+      if (dateVal instanceof Date) {
+        const y = dateVal.getFullYear(), m = String(dateVal.getMonth()+1).padStart(2,'0'), d = String(dateVal.getDate()).padStart(2,'0');
+        mois = `${y}-${m}-${d}`;
+      }
+
+      const cat = transport > 0 ? 'Transport' : repas > 0 ? 'Repas' : '';
+
+      rows.push({ mois, categorie: cat, transport, repas, commentaire: comment, vat_lines: vatLines, total_ttc: totalTTC, total_ht: parseFloat(totalHT.toFixed(2)), tva_10: tva10, tva_20: tva20, tva_2_6: tva26, tva_5_5: tva55, description: '', client: '', projet: '', images: [] });
+    });
+
+    if (!rows.length) return res.json({ imported: 0 });
+    const { error } = await supabase.from('expenses').insert(rows);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ imported: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Export Excel ──────────────────────────────────────────
 app.get('/api/export/excel', async (req, res) => {
   let q = supabase.from('expenses').select('*').order('mois').order('id');
